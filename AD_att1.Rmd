@@ -1,0 +1,684 @@
+---
+title: "AD_att1"
+author: "Natalie Chong"
+date: "5/12/2020"
+output: html_document
+---
+# Step 1: Set parameters; simulate to equilibrium
+```{r}
+Hcol <- 'hotpink'
+Rcol <- 'peru'
+Mcol <- 'seagreen3'
+Ncol <- 'dodgerblue'
+D <- 0.5 # Dilution Rate (Outflow)
+R_0 <- 25 # Inflow Concentration (Nitrogen)
+l <- 0.05 # fungal mortality
+s <- 0.05 # senescence coefficient
+c <- 0.7 # host's C:N Ratio
+u_res <- 0.3 #Fungus M uptake rate
+u_n <- 0 #Fungus N uptake rate
+#f <- 0.5/2 + 0.5*(u_m*M/(u_m*M + u_n*N)) # fidelity of plant allocation to Fungi M
+#1- f 
+#a <- 0.5/2 +0.5*(u_n/(u_m + u_n))
+x <- u_res/6 #cost of mutualism of Fungi M
+y <- u_n/6 #cost of mutualsim of Fungi N
+b <- 0.3 #symbiont's intrinsic growth rate
+C_a <- 0.2 #Allocation Carbon
+C_c <- 0.3 #Construction Carbon 
+v <- 0.3  #Conversion efficiency, Host carbon to more symbionts
+```
+
+```{r}
+tset <- seq(from=0, to= 300, length.out = 10000)
+H.simu1 <- NaN*tset; H.simu1[1] <- 1
+M.simu1 <- NaN*tset; M.simu1[1] <- 1
+R.simu1 <- NaN*tset; R.simu1[1] <- 10
+N.simu1 <- NaN*tset; N.simu1[1] <- 0
+
+
+#*M *N *H
+for(i in 2:length(tset)){
+    dt <- tset[i] - tset[i-1] 
+    H <- H.simu1[i-1] 
+    M <- M.simu1[i-1]
+    R <- R.simu1[i-1]
+    N <- N.simu1[i-1]
+    f <- 0.5/2 + 0.5*(u_res*M/(u_res*M + u_n*N))
+   
+    
+    dR <- (D*(R_0 - R) - u_res*M*R - u_n*N*R + (s*H)/c)*dt
+    dH <- (c*u_res*R*M + c*u_n*R*N - (s*H) - ((u_res*C_a) + C_c)*M*H - (C_c + (u_n)*C_a)*N*H )*dt
+    dM <- (b*(1-x)*v*(C_c + (u_res*C_a))*H*M - l*M)*dt
+    dN <- (b*(1-y)*v*(C_c + (u_n*C_a))*H*N - l*N)*dt
+    
+    H.simu1[i] <- H + dH
+    M.simu1[i] <- M + dM
+    N.simu1[i] <- N + dN
+    R.simu1[i] <- R + dR
+    
+}
+
+#legend(x = 75, y = 10.5 , legend = c(), lwd=2, col = c())
+plot(x = tset, y = H.simu1, col = Hcol,type = 'l',ylim = c(0, 20),xlab = 'Time', ylab = 'Species biomass/Resource Abundance', lwd=2,las=1) 
+lines(x = tset, y = R.simu1,type='l',las=1,lwd=2,ylab='Resource',xlab='Time',col=Rcol)
+lines(x = tset, y = M.simu1, col = Mcol, lwd=2) 
+lines(x = tset, y = N.simu1, col = Ncol, lwd=2) 
+legend(x = 150, y = 20, legend = c('Host','Mutualist M', 'Mutant N', 'Resource'), lwd=2, col = c(Hcol,Mcol,Ncol,Rcol))
+#tail(H.simu1); tail( M.simu1); tail(R.simu1)
+
+```
+
+# Step 2 : Pick mutant trait value
+```{r}
+#u_res <- 0.3
+#u_mut <- max(rnorm (1, u_res, sd = 0.1), 0)
+u_mut <- 0.286825
+```
+
+# Step 3: Split M* into resident and mutant pools
+```{r}
+m_i <- 0.99*M.simu1[length(tset)]
+n_i <- 0.01*M.simu1[length(tset)]
+
+```
+
+# Step 4: Simulate dynamics from new initial conditions
+```{r}
+R0 <- R.simu1[length(tset)]
+H0 <- H.simu1[length(tset)]
+#M0 <- m_i
+#N0 <- n_i
+```
+
+#Step 5: Who's the winner?
+```{r}
+mutset1 <- seq(from=0, to= 10000, .1)
+H.simu2 <- NaN*mutset1; H.simu2[1] <- H0
+M.simu2 <- NaN*mutset1; M.simu2[1] <- m_i
+R.simu2 <- NaN*mutset1; R.simu2[1] <- R0
+N.simu2 <- NaN*mutset1; N.simu2[1] <- n_i
+
+
+#*M *N *H
+for(i in 2:length(mutset1)){
+    dt <- mutset1[i] - mutset1[i-1] 
+    H <- H.simu2[i-1] 
+    M <- M.simu2[i-1]
+    R <- R.simu2[i-1]
+    N <- N.simu2[i-1]
+   # f <- 0.5/2 + 0.5*(u_res*M/(u_res*M + u_mut*N))
+    
+  
+    
+    dR <- (D*(R_0 - R) - u_res*M*R - u_mut*N*R + (s*H)/c)*dt
+    dH <- (c*u_res*R*M + c*u_mut*R*N - (s*H) - ((u_res*C_a) + C_c)*M*H - (C_c + (u_mut)*C_a)*N*H )*dt
+    dM <- (b*(1-x)*v*(C_c + (u_res*C_a))*H*M - l*M)*dt
+    dN <- (b*(1-y)*v*(C_c + (u_mut*C_a))*H*N - l*N)*dt
+    
+    H.simu2[i] <- H + dH
+    M.simu2[i] <- M + dM
+    N.simu2[i] <- N + dN
+    R.simu2[i] <- R + dR
+    
+    
+}
+
+if(any(is.na(M.simu2))||(M.simu2[length(mutset1)] - M.simu2[length(mutset1) - 1])/M.simu2[length(mutset1)-1] >  0.000001) { warning("Oh noes! Something is still changing at end of simulation!!") } # || stop circuit sign, can only do for things that are not vectors. 
+if(any(is.na(N.simu2))||(N.simu2[length(mutset1)] - N.simu2[length(mutset1) - 1])/N.simu2[length(mutset1)-1] >  0.000001) { warning("Oh noes! Something is still changing at end of simulation!!") }
+N.simu2[length(mutset1)]; M.simu2[length(mutset1)]
+N.simu2[length(mutset1)] / (N.simu2[length(mutset1)] + M.simu2[length(mutset1)])
+N.simu2[length(mutset1) -1 ] / (N.simu2[length(mutset1) -1] + M.simu2[length(mutset1) -1 ])
+(N.simu2[length(mutset1)] / (N.simu2[length(mutset1)] + M.simu2[length(mutset1)])) - (N.simu2[length(mutset1) -1 ] / (N.simu2[length(mutset1) -1] + M.simu2[length(mutset1) -1 ]))
+#output
+#legend(x = 75, y = 10.5 , legend = c(), lwd=2, col = c())
+plot(x = mutset1, y = H.simu2, col = Hcol,type = 'l',ylim = c(0, 20),xlab = 'Time', ylab = 'Species biomass/Resource Abundance', lwd=2,las=1) 
+lines(x = mutset1, y = R.simu2,type='l',las=1,lwd=2,ylab='Resource',xlab='Time',col=Rcol)
+lines(x = mutset1, y = M.simu2, col = Mcol, lwd=2) 
+lines(x = mutset1, y = N.simu2, col = Ncol, lwd=2) 
+legend(x = 300, y = 20, legend = c('Host','Mutualist M', 'Mutant N', 'Resource'), lwd=2, col = c(Hcol,Mcol,Ncol,Rcol))
+#tail(H.simu2); tail( M.simu2); tail(R.simu2)
+```
+*Mutant won, spreads in population. u_res = u_mut, m_i = 0.99 Nstar *
+
+#THE BETTER WAY: Double For Loop  
+```{r}
+mutset1.6 <- rep(NaN,200) #still need to run 1000 rounds of mutations.
+mutset1.6[1] <- 0.7 # initial uptake rate. 
+
+#initial conditions for double loop. After system equilibriates stores eq values of R, H, M & N vector. 
+tset <- seq(from=0, to= 300, length.out = 10000)
+H.simu1 <- NaN*tset; H.simu1[1] <- 1
+M.simu1 <- NaN*tset; M.simu1[1] <- 1
+R.simu1 <- NaN*tset; R.simu1[1] <- 10
+N.simu1 <- NaN*tset; N.simu1[1] <- 0
+
+
+for(i in 2:length(tset)){
+    dt <- tset[i] - tset[i-1] 
+    H <- H.simu1[i-1] 
+    M <- M.simu1[i-1]
+    R <- R.simu1[i-1]
+    N <- N.simu1[i-1]
+   # f <- 0.5/2 + 0.5*(u_res*M/(u_res*M + u_n*N))
+   
+    
+    dR <- (D*(R_0 - R) - u_res*M*R - u_n*N*R + (s*H)/c)*dt
+    dH <- (c*u_res*R*M + c*u_n*R*N - (s*H) - ((u_res*C_a) + C_c)*M*H - (C_c + (u_n)*C_a)*N*H )*dt
+    dM <- (b*(1-x)*v*(C_c + (u_res*C_a))*H*M - l*M)*dt
+    dN <- (b*(1-y)*v*(C_c + (u_n*C_a))*H*N - l*N)*dt
+    
+    H.simu1[i] <- H + dH
+    M.simu1[i] <- M + dM
+    N.simu1[i] <- N + dN
+    R.simu1[i] <- R + dR
+    
+}
+H0 <- H.simu1[length(tset)]
+R0 <- R.simu1[length(tset)]
+M_i <- M.simu1[length(tset)]
+N_i <- N.simu1[length(tset)]
+
+H0 ; R0 ; M_i ; N_i
+ H <- H0
+ M <- M_i
+ R <- R0
+ N <- N_i
+  
+dt <- 0.01
+
+for(i in 2:length(mutset1.6)){ #mutset1.6: records every individual who won, 's uptake rate. 
+  delta <- 0.99 # mutant percentage in the population  
+  numberofreps <- 0 
+  u_mut <- max(rnorm (1, mutset1.6[i-1], sd = 0.05), 0)
+  N <- .05*M
+  M <- .95*M
+  u_res <- mutset1.6[i-1] 
+  
+ #normally outside of for loop stuff goes here, before while.
+ #simulate initial dynamics. Before mutation runs. (Steps 3-4) 
+  
+  while(numberofreps < 1000000 && (delta < 0.955 && delta > 0.045)){ # && means and, if previous is not true then won't run second. Other criteria: mutant declines, if delta is greater than 95.5% or less than .45%. 
+    #while loop Simulates dynamics. 
+    numberofreps <- numberofreps + 1; 
+    
+    dR <- (D*(R_0 - R) - u_res*M*R - u_mut*N*R + (s*H)/c)*dt
+    dH <- (c*u_res*R*M + c*u_mut*R*N - (s*H) - ((u_res*C_a) + C_c)*M*H - (C_c + (u_mut)*C_a)*N*H )*dt
+    dM <- (b*(1-(u_res/6))*v*(C_c + (u_res*C_a))*H*M - l*M)*dt
+    dN <- (b*(1-(u_mut/6))*v*(C_c + (u_mut*C_a))*H*N - l*N)*dt
+    
+    H <- H + dH
+    M <- M + dM
+    N<- N + dN
+    R<- R + dR
+    delta <- N / (N+M)
+    if(is.na(delta)){print("delta is not a number")}
+if(is.na(numberofreps)){print("#ofreps is not a number")}
+    #1st:maybe step size is too large - dt. Check with is.na function. 
+    # 2nd: have possibility of coexistance. 
+  
+  }
+ 
+  # Code below records who won. If M reaches 95% take it still as the new resident, and if N reaches 95% replaces M as the new resident. If neither is true print warning and break. 
+ 
+  #print("delta=")
+  print(delta)
+  
+if(delta < 0.955 && delta > 0.045){print("delta is intermediate")
+  print(u_mut)
+  print(u_res)
+  break}
+    if(delta >= 0.955){mutset1.6[i] <- u_mut} 
+    if(delta <= 0.045){mutset1.6[i] <- u_res}
+ 
+}
+ print("mutset1.6=")
+  print(mutset1.6)
+  
+  plot(x = 1:length(mutset1.6), y = mutset1.6, xlab = 'Rounds of mutations', ylab = 'Uptake Rates',lwd=2,las=1)
+  
+  #run with 1000 rounds of mutations.
+  #figure out where we get coexistance. compare different pairs of mutations and residents looking at combinations of values. 
+  #evolution preceeds in different directions...maybe everytime we start a new generation, pop size shrinks briefly. potential non-eq thing occuring.
+
+```
+
+
+
+# Comparing a combination of u values, via a matrix.
+```{r}
+D <- 0.5 # Dilution Rate (Outflow)
+R_0 <- 25 # Inflow Concentration (Nitrogen)
+l <- 0.05 # fungal mortality
+s <- 0.05 # senescence coefficient
+c <- 0.7 # host's C:N Ratio
+u_res <- 0.3 #Fungus M uptake rate
+u_n <- 0 #Fungus N uptake rate
+#f <- 0.5/2 + 0.5*(u_m*M/(u_m*M + u_n*N)) # fidelity of plant allocation to Fungi M
+b <- 0.3 #symbiont's intrinsic growth rate
+C_a <- 0.2 #Allocation Carbon
+C_c <- 0.3 #Construction Carbon 
+v <- 0.3  #Conversion efficiency, Host carbon to more symbionts
+```
+
+
+```{r}
+mutset1.7 <- matrix(NaN,nrow = 20, ncol = 20, dimnames = list(seq(1/20, 1, 1/20), seq(1/20, 1, 1/20))) #name rows to be u_m ; cols to be u_n. made a matrix thingie yay
+mutset1.7[1] <- 0.7
+
+dt <- 0.01
+
+for(i in 1:nrow(mutset1.7)){ #mutset1.6: records every individual who won. nrow here is analogous to "length" command.
+u_m <-  as.numeric(rownames(mutset1.7)[i]) 
+   
+#**    
+tset <- seq(from=0, to= 300, length.out = 10000)
+H.simu1 <- NaN*tset; H.simu1[1] <- 1
+M.simu1 <- NaN*tset; M.simu1[1] <- 1
+R.simu1 <- NaN*tset; R.simu1[1] <- 10
+#N.simu1 <- NaN*tset; N.simu1[1] <- 0
+
+
+for(k in 2:length(tset)){
+    dt <- tset[k] - tset[k-1] 
+    H <- H.simu1[k-1] 
+    M <- M.simu1[k-1]
+    R <- R.simu1[k-1]
+  #  N <- N.simu1[k-1]
+   # f <- 0.5/2 + 0.5*(u_res*M/(u_res*M + u_n*N))
+   
+    
+    dR <- (D*(R_0 - R) - u_m*M*R+ (s*H)/c)*dt
+    dH <- (c*u_m*R*M  - (s*H) - ((u_m*C_a) + C_c)*M*H  )*dt
+    dM <- (b*(1-(u_m/6))*v*(C_c + (u_m*C_a))*H*M - l*M)*dt
+   # dN <- (b*(1-(u_mut/6))*v*(C_c + (u_mut*C_a))*H*N - l*N)*dt
+    
+    H.simu1[k] <- H + dH
+    M.simu1[k] <- M + dM
+    #N.simu1[k] <- N + dN
+    R.simu1[k] <- R + dR
+    
+}
+H0 <- H.simu1[length(tset)]
+R0 <- R.simu1[length(tset)]
+M_i <- M.simu1[length(tset)]
+#N_i <- N.simu1[length(tset)]
+
+#H0 ; R0 ; M_i ; N_i
+ H <- H0
+ M <- M_i
+ R <- R0
+ #N <- N_i
+ dt <- 0.01
+      #added equilibrated resident population size. starting from **
+ for(j in 1: ncol(mutset1.7)){
+    u_n <- as.numeric(colnames(mutset1.7)[j]) # do whole while loop, initialize u_n and u_m to actual numbers, store delta in the matrix. 
+   
+    
+   
+  delta <- 0.99 # mutant percentage in the population  
+  numberofreps <- 0 
+  #normally outside of for loop stuff goes here before while.
+ #simulates dynamics initial.
+  N <- .01*M_i #change according to what the resident equilibrates to..
+  M <- .99*M_i
+  H <- H0
+  R <- R0
+  #print(u_m); print(u_n); print(R); print(H); print(dt)
+ # mutset1.7[[i, j]] <- delta #records delta, where delta is intermediate coexistance occured. 
+  
+  #mark down how host was before simu. 
+  
+  while(numberofreps < 1000000 && (delta < 0.995 && delta > 0.005)){ # && means and, if previous is not true then won't run second. Other criteria: mutant declines, if delta is greater than 99.5% or less than .5%. Simulates dynamics. 
+    numberofreps <- numberofreps + 1; 
+    
+    dR <- (D*(R_0 - R) - u_m*M*R - u_n*N*R + (s*H)/c)*dt
+    dH <- (c*u_m*R*M + c*u_n*R*N - (s*H) - ((u_m*C_a) + C_c)*M*H - (C_c + (u_n)*C_a)*N*H )*dt
+    dM <- (b*(1-(u_m/6))*v*(C_c + (u_m*C_a))*H*M - l*M)*dt
+    dN <- (b*(1-(u_n/6))*v*(C_c + (u_n*C_a))*H*N - l*N)*dt
+    
+    H <- H + dH
+    M <- M + dM
+    N<- N + dN
+    R<- R + dR
+    delta <- N / (N+M)
+    if(is.na(delta)){print("delta is not a number"); print(N); print (M)}
+if(is.na(numberofreps)){print("#ofreps is not a number")} #1st:maybe step size is too large - dt. Check with is.na function. 
+    # 2nd: have possibility of coexistance. 
+  
+  }
+  if(delta < 0.995 && delta > 0.005){print("delta is intermediate")
+ #print(u_m)
+  #print(u_n)
+ }
+   mutset1.7[[i,j]] <- delta  
+   
+   # mark down how host was after simu. 
+   if (delta >= 0.995){  mutset1.7[[i,j]] <- 1  }
+   if(delta <= 0.005){mutset1.7[[i,j]] <- 0  }
+   } 
+  # records who won. If M reaches 99% take it still as the new resident, and if N reaches 99% replaces M as the new resident. If neither is true print warning and break. 
+ 
+  
+}
+ print("mutset1.7=")
+  print(mutset1.7)
+  print(round(mutset1.7, 3))
+  
+#directions:  
+  # more mutualistic things invade.look at parameters to ask why.  
+  # how does host feels about partners that have u_m = 1 Depending on whether you want to look at Host before and after the simulation, you could either do *, or do
+       # Part 2: host is making taking over slow down? do it the old fashion way using eg. 0.3(col) and 0.25 (row).
+  #potential coexistance, is it true:- run for longer to find out.
+  #maybe try to bring back fidelity factor? [/] -problem: MUTANT CAN'T INVADE...
+  #google pairwise invasibility plots. 
+# install.packages('plot.matrix')
+  library('plot.matrix')
+  Mutant_percentage<-mutset1.7
+
+  plot(Mutant_percentage, border= NA, fmt.cell='%.3f', fmt.key ="%.3f", breaks = c(-0.1,0.011,.99,1),xlab= "u_n", ylab = "u_m", col = c('white','grey','black') ) 
+
+```
+
+
+
+# Step 6: Repeat from step 2 with u_mut as new u_res!
+```{r}
+u_res2 <- u_mut
+#u_mut2 <- max(rnorm (1, u_res2, sd = 0.1), 0)
+u_mut2 <- 0.2736905
+```
+
+
+```{r}
+m_i2 <- 0.99*N.simu2[length(mutset1)]
+n_i2 <- 0.01*M.simu2[length(mutset1)]
+```
+
+```{r}
+R0 <- R.simu2[length(mutset1)]
+H0 <- H.simu2[length(mutset1)]
+#M0 <- m_i
+#N0 <- n_i
+```
+
+```{r}
+mutset1.1 <- seq(from=0, to= 10000, .1)
+H.simu3 <- NaN*mutset1.1; H.simu3[1] <- H0
+M.simu3 <- NaN*mutset1.1; M.simu3[1] <- m_i2
+R.simu3 <- NaN*mutset1.1; R.simu3[1] <- R0
+N.simu3 <- NaN*mutset1.1; N.simu3[1] <- n_i2
+
+
+#*M *N *H
+for(i in 2:length(mutset1.1)){
+    dt <- mutset1.1[i] - mutset1.1[i-1] 
+    H <- H.simu3[i-1] 
+    M <- M.simu3[i-1]
+    R <- R.simu3[i-1]
+    N <- N.simu3[i-1]
+    f <- 0.5/2 + 0.5*(u_res2*M/(u_res2*M + u_mut2*N))
+   
+    
+    dR <- (D*(R_0 - R) - u_res2*M*R - u_mut2*N*R + (s*H)/c)*dt
+    dH <- (c*u_res2*R*M + c*u_mut2*R*N - (s*H) - ((u_res2*C_a) + C_c)*M*H - (C_c + (u_mut2)*C_a)*N*H )*dt
+    dM <- (b*(1-x)*v*(C_c + (u_res2*C_a))*H*M - l*M)*dt
+    dN <- (b*(1-y)*v*(C_c + (u_mut2*C_a))*H*N - l*N)*dt
+    
+    H.simu3[i] <- H + dH
+    M.simu3[i] <- M + dM
+    N.simu3[i] <- N + dN
+    R.simu3[i] <- R + dR
+    
+}
+
+#legend(x = 75, y = 10.5 , legend = c(), lwd=2, col = c())
+plot(x = mutset1.1, y = H.simu3, col = Hcol,type = 'l',ylim = c(0, 20),xlab = 'Time', ylab = 'Species biomass/Resource Abundance', lwd=2,las=1) 
+lines(x = mutset1.1, y = R.simu3,type='l',las=1,lwd=2,ylab='Resource',xlab='Time',col=Rcol)
+lines(x = mutset1.1, y = M.simu3, col = Mcol, lwd=2) 
+lines(x = mutset1.1, y = N.simu3, col = Ncol, lwd=2) 
+legend(x = 300, y = 20, legend = c('Host','Mutualist M', 'Mutant N', 'Resource'), lwd=2, col = c(Hcol,Mcol,Ncol,Rcol))
+tail(H.simu3); tail(M.simu3); tail(R.simu3)
+# 3800- 3850
+```
+
+*Mutant won again, rises later with slightly lower u.*
+
+# Step 7: umut3; mutset1.2; simu4
+```{r}
+u_res3 <- u_mut2
+#u_mut3 <- max(rnorm (1, u_res3, sd = 0.1), 0)
+u_mut3 <- 0.3455529
+```
+
+
+```{r}
+m_i3 <- 0.99*N.simu3[length(mutset1.1)]
+n_i3 <- 0.01*M.simu3[length(mutset1.1)]
+```
+
+```{r}
+R0 <- R.simu3[length(mutset1.1)]
+H0 <- H.simu3[length(mutset1.1)]
+#M0 <- m_i3
+#N0 <- n_i3
+```
+
+```{r}
+mutset1.2 <- seq(from=0, to= 3000, length.out = 10000)
+H.simu4 <- NaN*mutset1.2; H.simu4[1] <- H0
+M.simu4 <- NaN*mutset1.2; M.simu4[1] <- m_i3
+R.simu4 <- NaN*mutset1.2; R.simu4[1] <- R0
+N.simu4 <- NaN*mutset1.2; N.simu4[1] <- n_i3
+
+
+#*M *N *H
+for(i in 2:length(mutset1.2)){
+    dt <- mutset1.2[i] - mutset1.2[i-1] 
+    H <- H.simu4[i-1] 
+    M <- M.simu4[i-1]
+    R <- R.simu4[i-1]
+    N <- N.simu4[i-1]
+    f <- 0.5/2 + 0.5*(u_res3*M/(u_res3*M + u_mut3*N))
+   
+    
+    dR <- (D*(R_0 - R) - u_res3*M*R - u_mut3*N*R + (s*H)/c)*dt
+    dH <- (c*u_res3*R*M + c*u_mut3*R*N - (s*H) - ((u_res3*C_a) + C_c)*M*H - (C_c + (u_mut3)*C_a)*N*H )*dt
+    dM <- (b*(1-x)*v*(C_c + (u_res3*C_a))*H*M - l*M)*dt
+    dN <- (b*(1-y)*v*(C_c + (u_mut3*C_a))*H*N - l*N)*dt
+    
+    H.simu4[i] <- H + dH
+    M.simu4[i] <- M + dM
+    N.simu4[i] <- N + dN
+    R.simu4[i] <- R + dR
+    
+}
+
+#legend(x = 75, y = 10.5 , legend = c(), lwd=2, col = c())
+plot(x = mutset1.2, y = H.simu4, col = Hcol,type = 'l',ylim = c(0, 20),xlab = 'Time', ylab = 'Species biomass/Resource Abundance', lwd=2,las=1) 
+lines(x = mutset1.2, y = R.simu4,type='l',las=1,lwd=2,ylab='Resource',xlab='Time',col=Rcol)
+lines(x = mutset1.2, y = M.simu4, col = Mcol, lwd=2) 
+lines(x = mutset1.2, y = N.simu4, col = Ncol, lwd=2) 
+legend(x = 300, y = 20, legend = c('Host','Mutualist M', 'Mutant N', 'Resource'), lwd=2, col = c(Hcol,Mcol,Ncol,Rcol))
+tail(H.simu4); tail(M.simu4); tail(R.simu4)
+```
+
+*mutant invades*
+
+# Step 8: u_res4; umut4; m_i4; mutset1.3; simu5
+```{r}
+u_res4 <- u_mut3 #0.3455529
+#u_mut4 <- max(rnorm (1, u_res4, sd = 0.1), 0)
+u_mut4 <- 0.2511468
+```
+
+
+```{r}
+m_i4 <- 0.99*N.simu4[length(mutset1.2)]
+n_i4 <- 0.01*M.simu4[length(mutset1.2)]
+```
+
+```{r}
+R0 <- R.simu4[length(mutset1.2)]
+H0 <- H.simu4[length(mutset1.2)]
+#M0 <- m_i4
+#N0 <- n_i4
+```
+
+```{r}
+mutset1.3 <- seq(from=0, to= 10000, .1)
+H.simu5 <- NaN*mutset1.3; H.simu5[1] <- H0
+M.simu5 <- NaN*mutset1.3; M.simu5[1] <- m_i4
+R.simu5 <- NaN*mutset1.3; R.simu5[1] <- R0
+N.simu5 <- NaN*mutset1.3; N.simu5[1] <- n_i4
+
+
+#*M *N *H
+for(i in 2:length(mutset1.3)){
+    dt <- mutset1.3[i] - mutset1.3[i-1] 
+    H <- H.simu5[i-1] 
+    M <- M.simu5[i-1]
+    R <- R.simu5[i-1]
+    N <- N.simu5[i-1]
+    f <- 0.5/2 + 0.5*(u_res4*M/(u_res4*M + u_mut4*N))
+   
+    
+    dR <- (D*(R_0 - R) - u_res4*M*R - u_mut4*N*R + (s*H)/c)*dt
+    dH <- (c*u_res4*R*M + c*u_mut4*R*N - (s*H) - ((u_res4*C_a) + C_c)*M*H - (C_c + (u_mut4)*C_a)*N*H )*dt
+    dM <- (b*(1-x)*v*(C_c + (u_res4*C_a))*H*M - l*M)*dt
+    dN <- (b*(1-y)*v*(C_c + (u_mut4*C_a))*H*N - l*N)*dt
+    
+    H.simu5[i] <- H + dH
+    M.simu5[i] <- M + dM
+    N.simu5[i] <- N + dN
+    R.simu5[i] <- R + dR
+    
+}
+
+#legend(x = 75, y = 10.5 , legend = c(), lwd=2, col = c())
+plot(x = mutset1.3, y = H.simu5, col = Hcol,type = 'l',ylim = c(0, 20),xlab = 'Time', ylab = 'Species biomass/Resource Abundance', lwd=2,las=1) 
+lines(x = mutset1.3, y = R.simu5,type='l',las=1,lwd=2,ylab='Resource',xlab='Time',col=Rcol)
+lines(x = mutset1.3, y = M.simu5, col = Mcol, lwd=2) 
+lines(x = mutset1.3, y = N.simu5, col = Ncol, lwd=2) 
+legend(x = 300, y = 10, legend = c('Host','Mutualist M', 'Mutant N', 'Resource'), lwd=2, col = c(Hcol,Mcol,Ncol,Rcol))
+tail(H.simu5); tail(M.simu5); tail(R.simu5)
+```
+*Mutualist wins, N fails to invade, u_res remains, Mi = 0.99 x Mstar*
+
+# Step 9: u_res5; umut5; m_i5; mutset1.4; simu6; RES WON!
+```{r}
+u_res5 <- u_res4 #0.3455529
+#u_mut5 <- max(rnorm (1, u_res5, sd = 0.1), 0)
+u_mut5 <- 0.3665069
+```
+
+
+```{r}
+m_i5 <- 0.99*M.simu5[length(mutset1.3)]
+n_i5 <- 0.01*N.simu5[length(mutset1.3)]
+```
+
+```{r}
+R0 <- R.simu5[length(mutset1.3)]
+H0 <- H.simu5[length(mutset1.3)]
+#M0 <- m_i5
+#N0 <- n_i5
+```
+
+```{r}
+mutset1.4 <- seq(from=0, to= 3200, .1)
+H.simu6 <- NaN*mutset1.4; H.simu6[1] <- H0
+M.simu6 <- NaN*mutset1.4; M.simu6[1] <- m_i5
+R.simu6 <- NaN*mutset1.4; R.simu6[1] <- R0
+N.simu6 <- NaN*mutset1.4; N.simu6[1] <- n_i5
+
+
+#*M *N *H
+for(i in 2:length(mutset1.4)){
+    dt <- mutset1.4[i] - mutset1.4[i-1] 
+    H <- H.simu6[i-1] 
+    M <- M.simu6[i-1]
+    R <- R.simu6[i-1]
+    N <- N.simu6[i-1]
+    f <- 0.5/2 + 0.5*(u_res5*M/(u_res5*M + u_mut5*N))
+   
+    
+    dR <- (D*(R_0 - R) - u_res5*M*R - u_mut5*N*R + (s*H)/c)*dt
+    dH <- (c*u_res5*R*M + c*u_mut5*R*N - (s*H) - ((u_res5*C_a) + C_c)*M*H - (C_c + (u_mut5)*C_a)*N*H )*dt
+    dM <- (b*(1-x)*v*(C_c + (u_res5*C_a))*H*M - l*M)*dt
+    dN <- (b*(1-y)*v*(C_c + (u_mut5*C_a))*H*N - l*N)*dt
+    
+    H.simu6[i] <- H + dH
+    M.simu6[i] <- M + dM
+    N.simu6[i] <- N + dN
+    R.simu6[i] <- R + dR
+    
+}
+
+#legend(x = 75, y = 10.5 , legend = c(), lwd=2, col = c())
+plot(x = mutset1.4, y = H.simu6, col = Hcol,type = 'l',ylim = c(0, 20),xlab = 'Time', ylab = 'Species biomass/Resource Abundance', lwd=2,las=1) 
+lines(x = mutset1.4, y = R.simu6,type='l',las=1,lwd=2,ylab='Resource',xlab='Time',col=Rcol)
+lines(x = mutset1.4, y = M.simu6, col = Mcol, lwd=2) 
+lines(x = mutset1.4, y = N.simu6, col = Ncol, lwd=2) 
+legend(x = 300, y = 10, legend = c('Host','Mutualist M', 'Mutant N', 'Resource'), lwd=2, col = c(Hcol,Mcol,Ncol,Rcol))
+tail(H.simu6); tail(M.simu6); tail(N.simu6); tail(R.simu6)
+```
+*Mutualist wins, N fails to invade, u_res remains, Mi = 0.99 x Mstar*
+
+# Step 10: u_res6; umut6; m_i6; mutset1.5; simu7; RES WON!
+```{r}
+u_res6 <- u_res5 
+#u_mut6 <- max(rnorm (1, u_res6, sd = 0.1), 0)
+u_mut6 <- 0.4285827
+```
+
+
+```{r}
+m_i6 <- 0.99*M.simu6[length(mutset1.4)]
+n_i6 <- 0.01*N.simu6[length(mutset1.4)]
+```
+
+```{r}
+R0 <- R.simu6[length(mutset1.4)]
+H0 <- H.simu6[length(mutset1.4)]
+#M0 <- m_i5
+#N0 <- n_i5
+```
+
+```{r}
+mutset1.5 <- seq(from=0, to= 2500, .1)
+H.simu7 <- NaN*mutset1.5; H.simu7[1] <- H0
+M.simu7 <- NaN*mutset1.5; M.simu7[1] <- m_i6
+R.simu7 <- NaN*mutset1.5; R.simu7[1] <- R0
+N.simu7 <- NaN*mutset1.5; N.simu7[1] <- n_i6
+
+
+#*M *N *H
+for(i in 2:length(mutset1.5)){
+    dt <- mutset1.5[i] - mutset1.5[i-1] 
+    H <- H.simu7[i-1] 
+    M <- M.simu7[i-1]
+    R <- R.simu7[i-1]
+    N <- N.simu7[i-1]
+    f <- 0.5/2 + 0.5*(u_res6*M/(u_res6*M + u_mut6*N))
+   
+    
+    dR <- (D*(R_0 - R) - u_res6*M*R - u_mut6*N*R + (s*H)/c)*dt
+    dH <- (c*u_res6*R*M + c*u_mut6*R*N - (s*H) - ((u_res6*C_a) + C_c)*M*H - (C_c + (u_mut6)*C_a)*N*H )*dt
+    dM <- (b*(1-x)*v*(C_c + (u_res6*C_a))*H*M - l*M)*dt
+    dN <- (b*(1-y)*v*(C_c + (u_mut6*C_a))*H*N - l*N)*dt
+    
+    H.simu7[i] <- H + dH
+    M.simu7[i] <- M + dM
+    N.simu7[i] <- N + dN
+    R.simu7[i] <- R + dR
+    
+}
+
+#legend(x = 75, y = 10.5 , legend = c(), lwd=2, col = c())
+plot(x = mutset1.5, y = H.simu7, col = Hcol,type = 'l',ylim = c(0, 20),xlab = 'Time', ylab = 'Species biomass/Resource Abundance', lwd=2,las=1) 
+lines(x = mutset1.5, y = R.simu7,type='l',las=1,lwd=2,ylab='Resource',xlab='Time',col=Rcol)
+lines(x = mutset1.5, y = M.simu7, col = Mcol, lwd=2) 
+lines(x = mutset1.5, y = N.simu7, col = Ncol, lwd=2) 
+legend(x = 300, y = 10, legend = c('Host','Mutualist M', 'Mutant N', 'Resource'), lwd=2, col = c(Hcol,Mcol,Ncol,Rcol))
+tail(H.simu7); tail(M.simu7); tail(N.simu7); tail(R.simu7)
+```
