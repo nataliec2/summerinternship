@@ -1,0 +1,115 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+---
+title: "Untitled"
+author: "Natalie Chong"
+date: "4/6/2020"
+output: html_document
+---
+
+
+
+```{r}
+Hcol <- 'hotpink'
+Rcol <- 'peru'
+Mcol <- 'seagreen3'
+Ncol <- 'dodgerblue'
+D <- 0.3 # Dilution Rate (Outflow)
+R_0 <- 50 # Inflow Concentration (Nitrogen)
+l <- 0.3 # fungal mortality
+s <- 0.1 # senescence coefficient
+c <- 0.8 # host's C:N Ratio
+u <- 0.7 #Fungus uptake rate
+f <- 0.8 # fidelity of plant allocation to mutualist symbionts 
+x <- 0.05 #cost of mutualism (s)
+b <- 0.8 #symbiont's maximum growth rate
+k <- 0.4 # Carbon half-saturation constant
+C_a <- 0.8 #Allocation Carbon
+C_c <- 0.2 #Construction Carbon 
+v <- 0.4 #Conversion efficiency, Host carbon to more symbionts
+
+# Host Equation dH/dt <- c*u*M*R - s*H -p*H*M
+#Mutualist Partner Equation dM/dt <- f*p_m*H*M - l*M
+#Non-mutualist Partner Equation dN/dt <- f*(p_n)*H*N - l*N
+#Explicit resource pool Equation dR/dt <- D(R_0 - R) - u*M*R + (s*H)/c
+
+tset <- seq(from=0, to=3000, length.out = 10000)
+H.simu1 <- NaN*tset; H.simu1[1] <- 1
+M.simu1 <- NaN*tset; M.simu1[1] <- 1
+R.simu1 <- NaN*tset; R.simu1[1] <- 10
+N.simu1 <- NaN*tset; N.simu1[1] <- 1
+#*M *N *H
+for(i in 2:length(tset)){ 
+    dt <- tset[i] - tset[i-1] 
+    H <- H.simu1[i-1] 
+    M <- M.simu1[i-1]
+    R <- R.simu1[i-1]
+    N <- N.simu1[i-1]
+    dR <- (D*(R_0 - R) - u*M*R + (s*H)/c)*dt
+    dH <- ( c*u*R*M - (s*H) - ((f*C_a) + C_c)*M*H - (C_c + (1-f)*C_a)*N*H )*dt
+    dM <- (b*(1-x)*v*(((f*C_a)+C_c)*H*M)/(k + v*(((f*C_a)+C_c)*H*M)) - l*M)*dt
+    dN <- (b*v*((C_c + ((1-f)*C_a))*H*N)/(k + (C_c + ((1-f)*C_a))*v*H*N) - l*N)*dt
+    
+    H.simu1[i] <- H + dH
+    M.simu1[i] <- M + dM
+    N.simu1[i] <- N + dN
+    R.simu1[i] <- R + dR
+}
+#tail(R.simu1) ; tail(H.simu1); tail(M.simu1); tail(N.simu1), to check eq?
+plot(tset,R.simu1,type='l',las=1,lwd=2,ylab='Resource',xlab='Time',col=Rcol)
+legend(x = 75, y = 10 , legend = c('Resource'), lwd=2, col = c(Rcol))
+plot(x = tset, y = H.simu1, col = Hcol, ylim = c(1,4),type = 'l',xlab = 'Time', ylab = 'Growth', lwd=2,las=1) 
+lines(x = tset, y = M.simu1, col = Mcol, lwd=2) 
+lines(x = tset, y = N.simu1, col = Ncol, lwd=2) 
+legend(x = 65, y = 1.7 , legend = c('Host','Mutualist', 'Non-Mutualist'), lwd=2, col = c(Hcol,Mcol,Ncol))
+```
+
+```{r}
+fset <- seq(from= 0, to = 1, length.out = 15)
+Hstar <- NaN*fset
+Mstar <- NaN*fset
+Nstar <- NaN*fset
+Rstar <- NaN*fset
+
+for(k in 1: length(fset)){
+  f <- fset[k]
+  tset1 <- seq(from = 0, to = 100, length.out = 10000)
+    R.simu2 <- NaN*tset1
+    R.simu2[1] <- 10 
+    H.simu2 <- NaN*tset1
+    H.simu2[1] <- 1   
+    M.simu2 <- NaN*tset1
+    M.simu2[1] <- 1
+    N.simu2 <- NaN*tset1
+    N.simu2[1] <- 1 
+    
+    
+    for(i in 2: length(tset1)){
+      dt <- tset1[i] - tset1[i-1]
+    R <- R.simu2[i-1]
+    H <- H.simu2[i-1]
+    M <- M.simu2[i-1]
+    N <- N.simu2[i-1]
+    dR <- (D*(R_0 - R) - u*M*R + (s*H)/c)*dt
+    dH <- ( c*u*R*M - (s*H) - ((f*C_a) + C_c)*M*H - (C_c + (1-f)*C_a)*N*H )*dt
+    dM <- (b*(1-x)*v*(((f*C_a)+C_c)*H*M)/(k + v*(((f*C_a)+C_c)*H*M)) - l*M)*dt
+    dN <- (b*v*((C_c + ((1-f)*C_a))*H*N)/(k + (C_c + ((1-f)*C_a))*v*H*N) - l*N)*dt
+    R.simu2[i] <- R.simu2[i-1] +dR
+    H.simu2[i] <- H.simu2[i-1] +dH
+    N.simu2[i] <- N.simu2[i-1] +dN
+    M.simu2[i] <- M.simu2[i-1] +dM
+    }
+   Rstar[k] <- R.simu2[length(tset1)] 
+   Hstar[k] <- H.simu2[length(tset1)] 
+   Nstar[k] <- N.simu2[length(tset1)]
+   Mstar[k] <- M.simu2[length(tset1)]
+}
+
+
+plot(fset,Rstar,type='l',lwd=2,col=Rcol,las=1,xlab='Fidelity of Host to Mutualist, f ',ylab='Stable equilibria of Resource, R*')
+plot(fset,Hstar,type='l',lwd=2,col=Hcol,las=1,xlab='Fidelity of Host to Mutualist, f ',ylab='Stable equilibria of host, H*')
+plot(fset,Mstar,type='l',lwd=2,col=Mcol,las=1,xlab='Fidelity of Host to Mutualist, f ',ylab='Stable equilibria of Mutualist, M*')
+plot(fset,Nstar,type='l',lwd=2,col=Ncol,las=1,xlab='Fidelity of Host to Mutualist, f ',ylab='Stable equilibria of Non-Mutualist, N*')
+```
