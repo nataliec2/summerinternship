@@ -1,0 +1,144 @@
+---
+title: "AD_att5"
+author: "Natalie Chong"
+date: "6/30/2020"
+output: html_document
+---
+
+# Tryna make Fidelity a saturating function of fungal uptake rate. 
+```{r}
+D <- 0.5 # Dilution Rate (Outflow)
+R_0 <- 25 # Inflow Concentration (Nitrogen)
+l <- 0.05 # fungal mortality
+s <- 0.05 # senescence coefficient
+c <- 0.7 # host's C:N Ratio
+b <- 0.3 #symbiont's intrinsic growth rate
+C_a <- 0.2 #Allocation Carbon
+C_c <- 0.3 #Construction Carbon 
+v <- 0.3  #Conversion efficiency, Host carbon to more symbionts
+
+
+fun <- function(u_m){(((u_m)*R)/((u_m/2)+R))}
+```
+
+```{r}
+
+mutset1.2 <- matrix(NaN,nrow = 20, ncol = 20, dimnames = list(seq(1/20, 1, 1/20), seq(1/20, 1, 1/20))) #name rows to be u_m ; cols to be u_n. made a matrix thingie yay
+
+dt <- 0.01
+
+for(i in 1:nrow(mutset1.2)){ #mutset1.6: records every individual who won. nrow here is analogous to "length" command.
+u_m <-  as.numeric(rownames(mutset1.2)[i]) 
+   
+#**    
+tset <- seq(from=0, to= 300, length.out = 10000)
+H.simu1 <- NaN*tset; H.simu1[1] <- 1
+M.simu1 <- NaN*tset; M.simu1[1] <- 1
+R.simu1 <- NaN*tset; R.simu1[1] <- 10
+#N.simu1 <- NaN*tset; N.simu1[1] <- 0
+
+
+for(k in 2:length(tset)){
+    dt <- tset[k] - tset[k-1] 
+    H <- H.simu1[k-1] 
+    M <- M.simu1[k-1]
+    R <- R.simu1[k-1]
+  #  N <- N.simu1[k-1]
+   # f <- 0.5/2 + 0.5*(u_res*M/(u_res*M + u_n*N))
+   
+    
+    dR <- (D*(R_0 - R) - u_m*M*R+ (s*H)/c)*dt
+    dH <- (c*u_m*R*M  - (s*H) - ((fun(u_m)*C_a) + C_c)*M*H  )*dt
+    dM <- (b*(1-(u_m/6))*v*(C_c + (fun(u_m)*C_a))*H*M - l*M)*dt
+   # dN <- (b*(1-(u_mut/6))*v*(C_c + (u_mut*C_a))*H*N - l*N)*dt
+    
+    H.simu1[k] <- H + dH
+    M.simu1[k] <- M + dM
+    #N.simu1[k] <- N + dN
+    R.simu1[k] <- R + dR
+    
+}
+H0 <- H.simu1[length(tset)]
+R0 <- R.simu1[length(tset)]
+M_i <- M.simu1[length(tset)]
+#N_i <- N.simu1[length(tset)]
+
+#H0 ; R0 ; M_i ; N_i
+ H <- H0
+ M <- M_i
+ R <- R0
+ #N <- N_i
+ dt <- 0.01
+      #added equilibrated resident population size. starting from **
+ for(j in 1: ncol(mutset1.2)){
+    u_n <- as.numeric(colnames(mutset1.2)[j]) # do whole while loop, initialize u_n and u_m to actual numbers, store delta in the matrix. 
+   
+    
+   
+  delta <- 0.99 # mutant percentage in the population  
+  numberofreps <- 0 
+  #normally outside of for loop stuff goes here before while.
+ #simulates dynamics initial.
+  N <- .01*M_i #change according to what the resident equilibrates to..
+  M <- .99*M_i
+  H <- H0
+  R <- R0
+  #print(u_m); print(u_n); print(R); print(H); print(dt)
+ # mutset1.2[[i, j]] <- delta #records delta, where delta is intermediate coexistance occured. 
+  
+  #mark down how host was before simu. 
+  
+  while(numberofreps < 1000000 && (delta < 0.995 && delta > 0.005)){ # && means and, if previous is not true then won't run second. Other criteria: mutant declines, if delta is greater than 99.5% or less than .5%. Simulates dynamics. 
+    numberofreps <- numberofreps + 1; 
+    
+    dR <- (D*(R_0 - R) - u_m*M*R - u_n*N*R + (s*H)/c)*dt
+    dH <- (c*u_m*R*M + c*u_n*R*N - (s*H) - ((fun(u_m)*C_a) + C_c)*M*H - (C_c + fun(u_n)*C_a)*N*H )*dt
+    dM <- (b*(1-(u_m/6))*v*(C_c + (fun(u_m)*C_a))*H*M - l*M)*dt
+    dN <- (b*(1-(u_n/6))*v*(C_c + (fun(u_n)*C_a))*H*N - l*N)*dt
+    
+    H <- H + dH
+    M <- M + dM
+    N<- N + dN
+    R<- R + dR
+    delta <- N / (N+M)
+    if(is.na(delta)){print("delta is not a number"); print(N); print (M)}
+if(is.na(numberofreps)){print("#ofreps is not a number")} #1st:maybe step size is too large - dt. Check with is.na function. 
+    # 2nd: have possibility of coexistance. 
+  
+  }
+  #if(delta < 0.995 && delta > 0.005){print("delta is intermediate")
+ #print(u_m)
+  #print(u_n)
+# }
+   mutset1.2[[i,j]] <- delta  
+   
+   # mark down how host was after simu. 
+   if (delta >= 0.995){  mutset1.2[[i,j]] <- 1  }
+   if(delta <= 0.005){mutset1.2[[i,j]] <- 0  }
+   } 
+  # records who won. If M reaches 99% take it still as the new resident, and if N reaches 99% replaces M as the new resident. If neither is true print warning and break. 
+ 
+  
+}
+ print("mutset1.2=")
+  print(mutset1.2)
+  print(round(mutset1.2, 3))
+  
+#directions:  
+  # more mutualistic things invade.look at parameters to ask why.  
+  # how does host feels about partners that have u_m = 1 Depending on whether you want to look at Host before and after the simulation, you could either do *, or do change in host which we're not gonna be doing lol
+       # Part 2: host is making taking over slow down? do it the old fashion way using eg. 0.3(col) and 0.25 (row).
+  #potential coexistance, is it true:- run for longer to find out.
+  #maybe try to bring back fidelity factor? [/] -problem: MUTANT CAN'T INVADE...
+  #google pairwise invasibility plots. 
+# install.packages('plot.matrix')
+  library('plot.matrix')
+  Mutant_percentage<-mutset1.2
+
+  plot(Mutant_percentage, border= NA, fmt.cell='%.3f', fmt.key ="%.3f", breaks = c(-0.1,0.011,.99,1),xlab= "u_n", ylab = "u_m", col = c('white','grey','black') ) 
+
+
+```
+
+
+
