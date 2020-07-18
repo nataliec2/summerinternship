@@ -120,7 +120,7 @@ if(is.na(numberofreps)){print("#ofreps is not a number")} #1st:maybe step size i
 }
 # print("mutset1.3=")
  # print(mutset1.3)
-  print(round(mutset1.3, 3))
+ # print(round(mutset1.3, 3))
   
 
  # library('plot.matrix')
@@ -130,6 +130,7 @@ if(is.na(numberofreps)){print("#ofreps is not a number")} #1st:maybe step size i
 
 
 ```
+
 
 ```{r}
 mutset1.4 <- matrix(NaN,nrow = 41, ncol = 41, dimnames = list(seq(0, 2, 1/20), seq(0, 2, 1/20))) #name rows to be u_m ; cols to be u_n. made a matrix thingie yay
@@ -183,7 +184,6 @@ M_i <- M.simu1[length(tset)]
    
   delta <- 0.99 # mutant percentage in the population  
   numberofreps <- 0 
-  #normally outside of for loop stuff goes here before while.
  #simulates dynamics initial.
   N <- .01*M_i #change according to what the resident equilibrates to..
   M <- .99*M_i
@@ -215,7 +215,7 @@ M_i <- M.simu1[length(tset)]
  }
 }
 
- print(round(mutset1.4, 3))
+ #print(round(mutset1.4, 3))
  
  #library(plot.matrix)
  Host_abundance<- mutset1.4 
