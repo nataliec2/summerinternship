@@ -60,9 +60,7 @@ for(k in 2:length(tset)){
 H0 <- H.simu1[length(tset)]
 R0 <- R.simu1[length(tset)]
 M_i <- M.simu1[length(tset)]
-#N_i <- N.simu1[length(tset)]
 
-#H0 ; R0 ; M_i ; N_i
  H <- H0
  M <- M_i
  R <- R0
