@@ -1,0 +1,107 @@
+---
+title: "AD_inimutG"
+author: "Natalie Chong"
+date: "7/17/2020"
+output: html_document
+---
+# Adaptive Dynamics using initial mutant growth rate. Based on Q: Can mutant invade when population is small? If dN/(dt*N) is + (Y); - (N).
+```{r}
+D <- 0.5 # Dilution Rate (Outflow)
+R_0 <- 25 # Inflow Concentration (Nitrogen)
+l <- 0.05 # fungal mortality
+s <- 0.05 # senescence coefficient
+c <- 0.7 # host's C:N Ratio
+b <- 0.3 #symbiont's intrinsic growth rate
+C_a <- 0.2 #Allocation Carbon
+C_c <- 0.3 #Construction Carbon 
+v <- 0.3  #Conversion efficiency, Host carbon to more symbionts
+a <- 1.747721
+
+fun <- function(u_m){(((u_m)*R)/((a)+R))}
+```
+
+```{r}
+mutset2.1 <- matrix(NaN,nrow = 20, ncol = 20, dimnames = list(seq(1/20, 1, 1/20), seq(1/20, 1, 1/20))) #name rows to be u_m ; cols to be u_n. made a matrix thingie yay
+
+dt <- 0.01
+
+for(i in 1:nrow(mutset2.1)){ #mutset2.1: records every individual who won. nrow here is analogous to "length" command.
+u_m <-  as.numeric(rownames(mutset2.1)[i]) 
+   
+#**    
+tset <- seq(from=0, to= 300, length.out = 10000)
+H.simu1 <- NaN*tset; H.simu1[1] <- 1
+M.simu1 <- NaN*tset; M.simu1[1] <- 1
+R.simu1 <- NaN*tset; R.simu1[1] <- 10
+
+for(k in 2:length(tset)){
+    dt <- tset[k] - tset[k-1] 
+    H <- H.simu1[k-1] 
+    M <- M.simu1[k-1]
+    R <- R.simu1[k-1]
+    
+    dR <- (D*(R_0 - R) - u_m*M*R+ (s*H)/c)*dt
+    dH <- (c*u_m*R*M  - (s*H) - ((fun(u_m)*C_a) + C_c)*M*H  )*dt
+    dM <- (b*(1-(u_m/6))*v*(C_c + (fun(u_m)*C_a))*H*M - l*M)*dt
+    H.simu1[k] <- H + dH
+    M.simu1[k] <- M + dM
+    R.simu1[k] <- R + dR
+    
+} 
+# run this intial condition loop in a seperate markdown to make sure that everything has equilibrated.
+H0 <- H.simu1[length(tset)]
+R0 <- R.simu1[length(tset)]
+M_i <- M.simu1[length(tset)]
+
+#Store Resident equilibrium values.
+ H <- H0
+ R <- R0
+ M <- M_i
+ dt <- 0.01
+
+# For every value of u_n.
+ for(j in 1: ncol(mutset2.1)){
+    u_n <- as.numeric(colnames(mutset2.1)[j])
+ 
+  numberofreps <- 0 
+  H <- H0
+  R <- R0
+  N <- .01*M_i
+  M <- .99*M_i
+  
+ 
+  while(numberofreps < 1000000){ 
+    numberofreps <- numberofreps + 1; 
+    
+    dR <- (D*(R_0 - R) - u_m*M*R - u_n*N*R + (s*H)/c)*dt
+    dH <- (c*u_m*R*M + c*u_n*R*N - (s*H) - ((fun(u_m)*C_a) + C_c)*M*H - (C_c + fun(u_n)*C_a)*N*H )*dt
+    dM <- (b*(1-(u_m/6))*v*(C_c + (fun(u_m)*C_a))*H*M - l*M)*dt
+    dN <- (b*(1-(u_n/6))*v*(C_c + (fun(u_n)*C_a))*H*N - l*N)*dt
+    N.N <- (b*(1-(u_n/6))*v*(C_c + (fun(u_n)*C_a))*H - l)*dt
+    
+    H <- H + dH
+    M <- M + dM
+    N <- N + dN
+    R <- R + dR
+   
+if(is.na(numberofreps)){print("#ofreps is not a number")}
+  }
+ mutset2.1[[i,j]] <- N.N
+   }
+
+  
+    if(N.N > 0){mutset2.1[[i,j]] <- 1} 
+    if(N.N <= 0){mutset2.1[[i,j]] <- 0}
+}
+  
+   
+
+ library('plot.matrix')
+  par(mar = c(4,4,4,4))
+  plot(mutset2.1, border= NA,  fmt.cell='%.1f', fmt.key ="%.2f", breaks = c(-0.1,0.011,.99,1),xlab= "Mutant Uptake Rate, u_n", ylab = "Resident Uptake Rate, u_m", col = c('white','grey','black') ) 
+    
+    
+    
+```
+
+*wrong wrong wrong, not having N would generate a graph that's across all columns. *
