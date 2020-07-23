@@ -16,11 +16,11 @@ b <- 0.3 #symbiont's intrinsic growth rate
 C_a <- 0.2 #Allocation Carbon
 C_c <- 0.3 #Construction Carbon 
 v <- 0.3  #Conversion efficiency, Host carbon to more symbionts
-a <- 1.747721
+a <- 1.747721 # Resource's half-saturation constant.
 
 fun <- function(u_m,R){(((u_m)*R)/((a)+R))}
-r0 <- function(u_m, R, M, H){((u_m)*R*M)/(H*(k + (u_m*R*M/H)))}
-r <- function(u_m, u_n, R, N, M){((u_m*M*R) + (u_n*R*N))/((H)*(k + ((u_m*R*M)/H) + ((u_n*R*N)/H)))}
+r0 <- function(u_m, R, M, H){((u_m)*R*M)/(H*(a + (u_m*R*M/H)))}
+r <- function(u_m, u_n, R, N, M){((u_m*M*R) + (u_n*R*N))/((H)*(a + ((u_m*R*M)/H) + ((u_n*R*N)/H)))}
 ```
 
 # Finished running after 47.15
@@ -111,7 +111,7 @@ if(is.na(numberofreps)){print("#ofreps is not a number")}
 
 ```
 
-# Code to visualize changes in host abundance, do not run until you rerun previous and it starts making sense.
+# Code to visualize changes in host abundance,
 ```{r}
 mutset3.1 <- matrix(NaN,nrow = 20, ncol = 20, dimnames = list(seq(1/20, 1, 1/20), seq(1/20, 1, 1/20)))
 dt <- 0.01
@@ -136,9 +136,9 @@ for(k in 2:length(tset)){
    # f <- 0.5/2 + 0.5*(u_res*M/(u_res*M + u_n*N))
    
     
-    dR <- (D*(R_0 - R) - u_m*M*R+ (s*H)/c)*dt
-    dH <- (c*u_m*R*M  - (s*H) - ((fun(u_m)*C_a) + C_c)*M*H  )*dt
-    dM <- (b*(1-(u_m/6))*v*(C_c + (fun(u_m)*C_a))*H*M - l*M)*dt
+    dR <- (D*(R_0 - R) - r0(u_m, R, M, H)+ (s*H)/c)*dt
+    dH <- (c*r0(u_m, R, M, H)*H  - (s*H) - ((fun(u_m,R)*C_a) + C_c)*M*H  )*dt #host can't exist without already being in the system!
+    dM <- (b*(1-(u_m/6))*v*(C_c + (fun(u_m,R)*C_a))*H*M - l*M)*dt
     
     H.simu1[k] <- H + dH
     M.simu1[k] <- M + dM
@@ -169,10 +169,10 @@ M_i <- M.simu1[length(tset)]
    while(numberofreps < 1000000 && (delta < 0.995 && delta > 0.005)){ # && means and, if previous is not true then won't run second. Other criteria: mutant declines, if delta is greater than 99.5% or less than .5%. Simulates dynamics. 
     numberofreps <- numberofreps + 1; 
     
-    dR <- (D*(R_0 - R) - u_m*M*R - u_n*N*R + (s*H)/c)*dt
-    dH <- (c*u_m*R*M + c*u_n*R*N - (s*H) - ((fun(u_m)*C_a) + C_c)*M*H - (C_c + fun(u_n)*C_a)*N*H)*dt
-    dM <- (b*(1-(u_m/6))*v*(C_c + ((fun(u_m)*C_a)))*H*M - l*M)*dt
-    dN <- (b*(1-(u_n/6))*v*(C_c + (fun(u_n)*C_a))*H*N - l*N)*dt
+    dR <- (D*(R_0 - R) - (r(u_m, u_n, R, N, M)) + (s*H)/c)*dt
+    dH <- (c*r(u_m, u_n, R, N, M)*H - (s*H) - ((fun(u_m,R)*C_a) + C_c)*M*H - (C_c + fun(u_n, R)*C_a)*N*H )*dt #Host can't multiply in numbers if there were no hosts to begin with.
+    dM <- (b*(1-(u_m/6))*v*(C_c + (fun(u_m,R)*C_a))*H*M - l*M)*dt
+    dN <- (b*(1-(u_n/6))*v*(C_c + (fun(u_n,R)*C_a))*H*N - l*N)*dt
     
     H <- H + dH
     M <- M + dM
@@ -187,7 +187,8 @@ M_i <- M.simu1[length(tset)]
 
  library(plot.matrix)
  Host_ab_3.0<- mutset3.1 
- plot(Host_ab_3.0,border= NA, fmt.key ="%.3f", fmt.cell = "%.3f", xlab= "Mutant Uptake Rate, u_n", ylab = "Resident Uptake Rate, u_m") #col = c('mediumpurple4','mediumorchid4','mediumpurple3','mediumpurple','mediumpurple2','mediumpurple1','mediumorchid3','mediumorchid1')) ,breaks = c(1.729, 1.74,1.75,1.76,1.77,1.78,1.79,1.8,1.82)
+ par(mar = c(4,4,4,4))
+ plot(Host_ab_3.0,border= NA, fmt.key ="%.2f", fmt.cell = "%.3f", xlab= "Mutant Uptake Rate, u_n", ylab = "Resident Uptake Rate, u_m") #col = c('mediumpurple4','mediumorchid4','mediumpurple3','mediumpurple','mediumpurple2','mediumpurple1','mediumorchid3','mediumorchid1')) ,breaks = c(1.729, 1.74,1.75,1.76,1.77,1.78,1.79,1.8,1.82)
 
 ```
 
@@ -230,8 +231,8 @@ for(k in 2:length(tset)){
     R <- R.simu1[k-1]
   
     
-    dR <- (D*(R_0 - R) - ((u_m)*R*M)/(H*(k + (u_m*R*M/H))) + (s*H)/c)*dt
-    dH <- (c*(((u_m)*R*M)/(H*(k + (u_m*R*M/H))))*H  - (s*H) - ((fun(u_m)*C_a) + C_c)*M*H  )*dt
+    dR <- (D*(R_0 - R) - u_m*M*R+ (s*H)/c)*dt
+    dH <- (c*u_m*R*M  - (s*H) - ((fun(u_m)*C_a) + C_c)*M*H  )*dt
     dM <- (b*(1-(u_m/6))*v*(C_c + (fun(u_m)*C_a))*H*M - l*M)*dt
   
     H.simu1[k] <- H + dH
