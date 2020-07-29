@@ -116,11 +116,11 @@ if(is.na(numberofreps)){print("#ofreps is not a number")}
 ```
 
 ```{r}
-mutset3.6 <- matrix(NaN,nrow = 20, ncol = 20, dimnames = list(seq(1/20, 1, 1/20), seq(1/20, 1, 1/20)))
+mutset3.7 <- matrix(NaN,nrow = 20, ncol = 20, dimnames = list(seq(1/20, 1, 1/20), seq(1/20, 1, 1/20)))
 dt <- 0.01
 
-for(i in 1:nrow(mutset3.6)){ #mutset1.6: records every individual who won. nrow here is analogous to "length" command.
-u_m <-  as.numeric(rownames(mutset3.6)[i]) 
+for(i in 1:nrow(mutset3.7)){ #mutset1.6: records every individual who won. nrow here is analogous to "length" command.
+u_m <-  as.numeric(rownames(mutset3.7)[i]) 
    
 #**    
 tset <- seq(from=0, to= 300, length.out = 10000)
@@ -161,8 +161,8 @@ M_i <- M.simu1[length(tset)]
  #N <- N_i
  dt <- 0.01
       #added equilibrated resident population size. starting from **
- for(j in 1: ncol(mutset3.6)){
-    u_n <- as.numeric(colnames(mutset3.6)[j])
+ for(j in 1: ncol(mutset3.7)){
+    u_n <- as.numeric(colnames(mutset3.7)[j])
     delta <- 0.99 # mutant percentage in the population  
   numberofreps <- 0 
   N <- .01*M_i #change according to what the resident equilibrates to..
@@ -183,14 +183,14 @@ M_i <- M.simu1[length(tset)]
     R<- R + dR
     delta <- N / (N+M)
    }
-    mutset3.6[[i,j]] <- H  
+    mutset3.7[[i,j]] <- H  
     
  }
 }
 
  library(plot.matrix)
- Host_ab_4.0<- mutset3.6 
+ Host_ab_4.0<- mutset3.7 
  par(mar = c(4,4,4,4))
- plot(Host_ab_4.0,border= NA, fmt.key ="%.2f", fmt.cell = "%.3f", xlab= "Mutant Uptake Rate, u_n", ylab = "Resident Uptake Rate, u_m") #col = c('mediumpurple4','mediumorchid4','mediumpurple3','mediumpurple','mediumpurple2','mediumpurple1','mediumorchid3','mediumorchid1')) ,breaks = c(1.729, 1.74,1.75,1.76,1.77,1.78,1.79,1.8,1.82)
+ plot(Host_ab_4.0,border= NA,fmt.cell = "%.3f", fmt.key ="%.2f",  xlab= "Mutant Uptake Rate, u_n", ylab = "Resident Uptake Rate, u_m") #col = c('mediumpurple4','mediumorchid4','mediumpurple3','mediumpurple','mediumpurple2','mediumpurple1','mediumorchid3','mediumorchid1')) ,breaks = c(1.729, 1.74,1.75,1.76,1.77,1.78,1.79,1.8,1.82, )
 ```
 
