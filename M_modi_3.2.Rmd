@@ -1,0 +1,119 @@
+---
+title: "M_modi_3.2"
+author: "Natalie Chong"
+date: "7/27/2020"
+output: html_document
+---
+
+# Built upon modifications of saturating function 3.0, set fidelity as a constant. Mutant and resident get different amounts of allocation carbon. R > M
+```{r}
+D <- 0.5 # Dilution Rate (Outflow)
+R_0 <- 25 # Inflow Concentration (Nitrogen)
+l <- 0.05 # fungal mortality
+s <- 0.05 # senescence coefficient
+c <- 0.7 # host's C:N Ratio
+b <- 0.3 #symbiont's intrinsic growth rate
+C_a <- 0.4 #Allocation Carbon
+C_c <- 0.3 #Construction Carbon 
+v <- 0.3  #Conversion efficiency, Host carbon to more symbionts
+a <- 1.747721 # Resource's half-saturation constant.
+f1 <- 0.1 # Fidelity of tree to resident
+f2 <- 0.08 # Fidelity of Tree to mutant
+# Combination above results in an inverse PIP. Mutant will invade at low uptake rates. when they(mut + res) have equal uptake rate values, mutant doesn't NOT change. 
+# Next tried making allocation carbon more valuable and see what happends?
+# invasion patch became even smaller.
+# Next try doing f = u^2 3.3
+# Latest Edit: Lowering fidelity by a bunch, increased invasion patch.
+#fun <- function(u_m,R){(((u_m)*R)/((a)+R))}
+r0 <- function(u_m, R, M, H){((u_m)*R*M)/(H*(a + (u_m*R*M/H)))}
+r <- function(u_m, u_n, R, N, M){((u_m*M*R) + (u_n*R*N))/((H)*(a + ((u_m*R*M)/H) + ((u_n*R*N)/H)))}
+```
+
+```{r}
+mutset3.4 <- matrix(NaN,nrow = 20, ncol = 20, dimnames = list(seq(1/20, 1, 1/20), seq(1/20, 1, 1/20))) 
+dt <- 0.01
+
+for(i in 1:nrow(mutset3.4)){ 
+u_m <-  as.numeric(rownames(mutset3.4)[i]) 
+   
+#Setting initial conditions (letting ecological dynamics play out)   
+tset <- seq(from=0, to= 300, length.out = 10000)
+H.simu1 <- NaN*tset; H.simu1[1] <- 1
+M.simu1 <- NaN*tset; M.simu1[1] <- 1
+R.simu1 <- NaN*tset; R.simu1[1] <- 10
+
+
+for(k in 2:length(tset)){
+    dt <- tset[k] - tset[k-1] 
+    H <- H.simu1[k-1] 
+    M <- M.simu1[k-1]
+    R <- R.simu1[k-1]
+  
+    
+    dR <- (D*(R_0 - R) - r0(u_m, R, M, H)+ (s*H)/c)*dt
+    dH <- (c*r0(u_m, R, M, H)*H  - (s*H) - ((f1*C_a) + C_c)*M*H  )*dt #host can't exist without already being in the system!
+    dM <- (b*(1-(u_m/6))*v*(C_c + (f1*C_a))*H*M - l*M)*dt
+  
+    H.simu1[k] <- H + dH
+    M.simu1[k] <- M + dM
+    R.simu1[k] <- R + dR
+    
+}
+# Save end values to holding vector.
+H0 <- H.simu1[length(tset)]
+R0 <- R.simu1[length(tset)]
+M_i <- M.simu1[length(tset)]
+
+ H <- H0
+ M <- M_i
+ R <- R0
+
+ dt <- 0.01
+    
+ for(j in 1: ncol(mutset3.4)){
+    u_n <- as.numeric(colnames(mutset3.4)[j]) 
+   
+  delta <- 0.99
+  numberofreps <- 0 
+  
+  N <- .01*M_i 
+  M <- .99*M_i
+  H <- H0
+  R <- R0
+ 
+  
+  while(numberofreps < 1000000 && (delta < 0.995 && delta > 0.005)){ 
+    numberofreps <- numberofreps + 1; 
+    
+    dR <- (D*(R_0 - R) - (r(u_m, u_n, R, N, M)) + (s*H)/c)*dt
+    dH <- (c*r(u_m, u_n, R, N, M)*H - (s*H) - ((f1*C_a) + C_c)*M*H - (C_c + f2*C_a)*N*H )*dt #Host can't multiply in numbers if there were no hosts to begin with.
+    dM <- (b*(1-(u_m/6))*v*(C_c + (f1*C_a))*H*M - l*M)*dt
+    dN <- (b*(1-(u_n/6))*v*(C_c + (f2*C_a))*H*N - l*N)*dt
+    
+    H <- H + dH
+    M <- M + dM
+    N<- N + dN
+    R<- R + dR
+    delta <- N / (N+M)
+    if(is.na(delta)){print("delta is not a number"); print(N); print (M)}
+if(is.na(numberofreps)){print("#ofreps is not a number")} 
+  }
+  
+   mutset3.4[[i,j]] <- delta  
+   
+   
+   if (delta >= 0.995){  mutset3.4[[i,j]] <- 1  }
+   if(delta <= 0.005){mutset3.4[[i,j]] <- 0  }
+   } 
+ 
+}
+ 
+  print(round(mutset3.4, 3))
+  
+   library('plot.matrix')
+  Mutant_percentage<-mutset3.4
+ par(mar = c(4,4,4,4))
+  plot(Mutant_percentage, border= NA, fmt.cell='%.2f', fmt.key ="%.2f", breaks = c(-0.1,0.011,.99,1),xlab= "Mutant Uptake Rate, u_n", ylab = "Resident Uptake Rate, u_m", col = c('white','grey','black') ) 
+```
+
+
