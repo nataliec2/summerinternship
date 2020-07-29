@@ -31,7 +31,7 @@ dt <- 0.01
 for(i in 1:nrow(mutset3.0)){ 
 u_m <-  as.numeric(rownames(mutset3.0)[i]) 
    
-#**    
+#Setting initial conditions (letting ecological dynamics play out)   
 tset <- seq(from=0, to= 300, length.out = 10000)
 H.simu1 <- NaN*tset; H.simu1[1] <- 1
 M.simu1 <- NaN*tset; M.simu1[1] <- 1
@@ -54,6 +54,7 @@ for(k in 2:length(tset)){
     R.simu1[k] <- R + dR
     
 }
+# Save end values to holding vector.
 H0 <- H.simu1[length(tset)]
 R0 <- R.simu1[length(tset)]
 M_i <- M.simu1[length(tset)]
@@ -96,8 +97,8 @@ if(is.na(numberofreps)){print("#ofreps is not a number")}
    mutset3.0[[i,j]] <- delta  
    
    
-  # if (delta >= 0.995){  mutset3.0[[i,j]] <- 1  }
-  # if(delta <= 0.005){mutset3.0[[i,j]] <- 0  }
+   if (delta >= 0.995){  mutset3.0[[i,j]] <- 1  }
+   if(delta <= 0.005){mutset3.0[[i,j]] <- 0  }
    } 
  
 }
@@ -106,8 +107,8 @@ if(is.na(numberofreps)){print("#ofreps is not a number")}
   
    library('plot.matrix')
   Mutant_percentage<-mutset3.0
-
-  plot(Mutant_percentage, border= NA, fmt.cell='%.3f', fmt.key ="%.3f", breaks = c(-0.1,0.011,.99,1),xlab= "Mutant Uptake Rate, u_n", ylab = "Resident Uptake Rate, u_m", col = c('white','grey','black') ) #run me again before screenshotting.
+ par(mar = c(4,4,4,4))
+  plot(Mutant_percentage, border= NA, fmt.cell='%.3f', fmt.key ="%.3f", breaks = c(-0.1,0.011,.99,1),xlab= "Mutant Uptake Rate, u_n", ylab = "Resident Uptake Rate, u_m", col = c('white','grey','black') ) 
 
 ```
 
@@ -192,7 +193,7 @@ M_i <- M.simu1[length(tset)]
 
 ```
 
-# Part 2: Using initial mutant growth rate to do this, 
+# Part 2: Using initial mutant growth rate to do this
 ```{r}
 D <- 0.5 # Dilution Rate (Outflow)
 R_0 <- 25 # Inflow Concentration (Nitrogen)
