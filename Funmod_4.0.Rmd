@@ -20,7 +20,7 @@ $$
 \newline
 \frac{dX}{dt} &= \frac{u_mR}{k_m + R} \cdot M - l_xx - \frac{u_mRM}{l_x + gH} = 0 \\
 \newline
-f_m = \frac{u_mR}{k_m + R}
+f_m &= \frac{u_mR}{k_m + R}
 \end{align}
 
 $$
@@ -40,20 +40,23 @@ $$
 \newline
 \frac{dN}{dt} &= v ( 1 - zu_n )  ( f_n C_a + C_c ) N H - l N
 \newline
-f_n = \frac{u_nR}{k_n + R} \\ f_m = \frac{u_mR}{k_m + R} \\ 
+f_n &= \frac{u_nR}{k_n + R} \\ f_m &= \frac{u_mR}{k_m + R} \\ 
 \end{align}
 $$
 # Lets see what this does! Setting parameters.
 *star symbols indicate descriptions that could be worded better*
+# second to the last plot: z= 0.2, v=0.1
+# last plot: z= 0.3, v= 0.05 +z-v, host was still unhappy
+#now z=0.3, v=0.1 
 ```{r}
 D <- 0.5 # Dilution Rate (Outflow)
 R_0 <- 25 # Inflow Concentration (Nitrogen)
 l <- 0.05 # fungal mortality
 s <- 0.05 # senescence coefficient
 c <- 0.7 # host's C:N Ratio
-z <- 0.1 #cost of being a mutualist per unit of uptake rate* 
-C_a <- 0.4 #Allocation Carbon
-C_c <- 0.3 #Construction Carbon 
+z <- 0.3 #cost of being a mutualist per unit of uptake rate* 
+C_a <- 0.3 #Allocation Carbon
+C_c <- 0.2 #Construction Carbon 
 v <- 0.1  #Conversion efficiency, Host carbon to more symbionts
 a <- 1.747721 # Resource's half-saturation constant.**This is k in equation!**
 l_x <- 0.2 # loss back to R pool per nutrient pool unit, let resident and mutant to have the same loss
@@ -156,9 +159,166 @@ if(is.na(numberofreps)){print("#ofreps is not a number")}
   plot(Mutant_percentage4, border= NA, fmt.cell='%.3f', fmt.key ="%.2f", breaks = c(-0.1,0.011,.99,1),xlab= "Mutant Uptake Rate, u_n", ylab = "Resident Uptake Rate, u_m", col = c('white','grey','black') ) 
 ```
 
-# Next lets see how the host is doing?
-
+# Record Average resident uptake rate at each mutation round.
 ```{r}
+mutset4.1 <-  matrix(NaN,nrow = 20, ncol = 20, dimnames = list(seq(1/20, 1, 1/20), seq(1/20, 1, 1/20))) 
+dt <- 0.01
 
+for(i in 1:nrow(mutset4.1)){ 
+u_m <-  as.numeric(rownames(mutset4.1)[i]) 
+   
+#Setting initial conditions (letting ecological dynamics play out) 
+tset <- seq(from=0, to= 300, length.out = 10000)
+H.simu1 <- NaN*tset; H.simu1[1] <- 1
+M.simu1 <- NaN*tset; M.simu1[1] <- 1
+R.simu1 <- NaN*tset; R.simu1[1] <- 10
+
+
+for(k in 2:length(tset)){
+    dt <- tset[k] - tset[k-1] 
+    H <- H.simu1[k-1] 
+    M <- M.simu1[k-1]
+    R <- R.simu1[k-1]
+  
+    
+    dR <- (D*(R_0 - R) + s*H/c - u_m*R*M + l_x*M*x(u_m, R,H))*dt
+    dH <- (c*g*x(u_m, R, H)*H*M  - (s*H) - ((fun(u_m,R)*C_a) + C_c)*M*H  )*dt #host can't exist without already being in the system!
+    dM <- (v*(1-(u_m*z))*(C_c + (fun(u_m,R)*C_a))*H*M - l*M)*dt
+  
+    
+    H.simu1[k] <- H + dH
+    M.simu1[k] <- M + dM
+    R.simu1[k] <- R + dR
+    
+}
+H0 <- H.simu1[length(tset)]
+R0 <- R.simu1[length(tset)]
+M_i <- M.simu1[length(tset)]
+
+
+
+ H <- H0
+ M <- M_i
+ R <- R0
+ dt <- 0.01
+     
+ for(j in 1: ncol(mutset4.1)){
+    u_n <- as.numeric(colnames(mutset4.1)[j])  
+   
+    
+   delta <- 0.99  
+  numberofreps <- 0 
+  
+  N <- .01*M_i 
+  M <- .99*M_i
+  H <- H0
+  R <- R0
+  
+  
+  while(numberofreps < 1000000 && (delta < 0.995 && delta > 0.005)){ # && means and, if previous is not true then won't run second. Other criteria: mutant declines, if delta is greater than 99.5% or less than .5%. Simulates dynamics. 
+    numberofreps <- numberofreps + 1; 
+    
+   dR <- (D*(R_0 - R) + s*H/c - u_m*R*M + l_x*M*x(u_m, R, H) - u_n*R*N + l_y*N*x(u_n, R, H))*dt
+    dH <- (c*g*x(u_m, R, H)*H*M + c*g*x(u_n, R, H)*H*N - (s*H) - ((fun(u_m,R)*C_a) + C_c)*M*H - ((fun(u_n,R)*C_a) + C_c)*N*H)*dt #host can't exist without already being in the system!
+    dM <- (v*(1-(u_m*z))*(C_c + (fun(u_m,R)*C_a))*H*M - l*M)*dt
+    dN <- (v*(1-(u_n*z))*(C_c + (fun(u_n,R)*C_a))*H*N - l*N)*dt
+    ur <- u_m*dt 
+    
+    
+    H <- H + dH
+    M <- M + dM
+    N<- N + dN
+    R<- R + dR
+    delta <- N / (N+M)
+   ur <- (u_m)*(1-delta)
+  mutset4.1[[i,j]] <- ur
+    
+  
+  }
+ }
+}
+uptakerate <- mutset4.1
+```
+
+# Next let's see how the host is doing?
+```{r}
+mutset4.2 <- matrix(NaN,nrow = 20, ncol = 20, dimnames = list(seq(1/20, 1, 1/20), seq(1/20, 1, 1/20))) 
+dt <- 0.01
+
+for(i in 1:nrow(mutset4.2)){ 
+u_m <-  as.numeric(rownames(mutset4.2)[i]) 
+   
+#Setting initial conditions (letting ecological dynamics play out)   
+tset <- seq(from=0, to= 200, length.out = 10000)
+H.simu1 <- NaN*tset; H.simu1[1] <- 1
+M.simu1 <- NaN*tset; M.simu1[1] <- 1
+R.simu1 <- NaN*tset; R.simu1[1] <- 10
+
+
+for(k in 2:length(tset)){
+    dt <- tset[k] - tset[k-1] 
+    H <- H.simu1[k-1] 
+    M <- M.simu1[k-1]
+    R <- R.simu1[k-1]
+  
+    
+    dR <- (D*(R_0 - R) + s*H/c - u_m*R*M + l_x*M*x(u_m, R,H))*dt
+    dH <- (c*g*x(u_m, R, H)*H*M  - (s*H) - ((fun(u_m,R)*C_a) + C_c)*M*H  )*dt #host can't exist without already being in the system!
+    dM <- (v*(1-(u_m*z))*(C_c + (fun(u_m,R)*C_a))*H*M - l*M)*dt
+  
+    H.simu1[k] <- H + dH
+    M.simu1[k] <- M + dM
+    R.simu1[k] <- R + dR
+    
+}
+# Save end values(@equilibrium) to holding vector.
+H0 <- H.simu1[length(tset)]
+R0 <- R.simu1[length(tset)]
+M_i <- M.simu1[length(tset)]
+
+ H <- H0
+ M <- M_i
+ R <- R0
+
+ dt <- 0.01
+    
+ for(j in 1: ncol(mutset4.2)){
+    u_n <- as.numeric(colnames(mutset4.2)[j]) 
+   
+  delta <- 0.99
+  numberofreps <- 0 
+
+  # insert 1% of mutant population into the system
+  N <- .01*M_i 
+  M <- .99*M_i
+  H <- H0
+  R <- R0
+ 
+  
+  while(numberofreps < 1000000  && (delta < 0.995 && delta > 0.005)){
+    numberofreps <- numberofreps + 1; 
+    
+     dR <- (D*(R_0 - R) + s*H/c - u_m*R*M + l_x*M*x(u_m, R, H) - u_n*R*N + l_y*N*x(u_n, R, H))*dt
+    dH <- (c*g*x(u_m, R, H)*H*M + c*g*x(u_n, R, H)*H*N - (s*H) - ((fun(u_m,R)*C_a) + C_c)*M*H - ((fun(u_n,R)*C_a) + C_c)*N*H)*dt #host can't exist without already being in the system!
+    dM <- (v*(1-(u_m*z))*(C_c + (fun(u_m,R)*C_a))*H*M - l*M)*dt
+    dN <- (v*(1-(u_n*z))*(C_c + (fun(u_n,R)*C_a))*H*N - l*N)*dt
+    
+    H <- H + dH
+    M <- M + dM
+    N<- N + dN
+    R<- R + dR
+    mutset4.2[[i,j]] <- H  
+  }
+   } 
+ 
+}
+ 
+#Host_abundance4 <- mutset4.2
+print(round(mutset4.2,3))
+```
+
+#Plot Host ab. vs resident uptake rate
+```{r}
+plot(x = mutset4.1, y = mutset4.2, las = , ylab ="Host biomass", xlab = "Average Resident Uptake Rate at each mutation round")
 ```
 
