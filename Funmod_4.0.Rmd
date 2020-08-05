@@ -59,7 +59,7 @@ C_a <- 0.3 #Allocation Carbon
 C_c <- 0.2 #Construction Carbon 
 v <- 0.1  #Conversion efficiency, Host carbon to more symbionts
 a <- 1.747721 # Resource's half-saturation constant.**This is k in equation!**
-l_x <- 0.2 # loss back to R pool per nutrient pool unit, let resident and mutant to have the same loss
+l_x <- 0.2 # loss back to R pool per unit of nutrient, let resident and mutant to have the same loss
 l_y <- 0.2
 g <- 0.8 #Tree's per capita groth rate
 
