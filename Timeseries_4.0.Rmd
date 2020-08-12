@@ -1,0 +1,844 @@
+---
+title: "Timeseries_4.0"
+author: "Natalie Chong"
+date: "8/11/2020"
+output: html_document
+---
+# When u_m is 0.05, u_n is 0.1
+```{r}
+D <- 0.5 # Dilution Rate (Outflow)
+R_0 <- 25 # Inflow Concentration (Nitrogen)
+l <- 0.05 # fungal mortality
+s <- 0.05 # senescence coefficient
+c <- 0.7 # host's C:N Ratio
+z <- 0.3 #cost of being a mutualist per unit of uptake rate* 
+C_a <- 0.3 #Allocation Carbon
+C_c <- 0.2 #Construction Carbon 
+v <- 0.1  #Conversion efficiency, Host carbon to more symbionts
+a <- 1.747721 # Resource's half-saturation constant.**This is k in equation!**
+l_x <- 0.2 # loss back to R pool per unit of nutrient, let resident and mutant to have the same loss
+l_y <- 0.2
+g <- 0.8 #Tree's per capita groth rate
+u_m <- 0.08 # Resident uptake rate
+u_n <- 0.1 # Mutant uptake rate
+Mcol <- "blue"
+Ncol <- "red"
+Hcol <- "green"
+Rcol <- "brown"
+
+fun <- function(u_m,R){(((u_m)*R)/((a)+R))}
+x <- function(u_m, R, H){(u_m*R)/(l_x + g*H)}
+```
+
+
+```{r}
+
+tset <- seq(from=0, to= 300, length.out = 10000)
+H.simu1 <- NaN*tset; H.simu1[1] <- 1
+M.simu1 <- NaN*tset; M.simu1[1] <- 1
+R.simu1 <- NaN*tset; R.simu1[1] <- 10
+
+ 
+
+
+
+for(k in 2:length(tset)){
+    dt <- tset[k] - tset[k-1] 
+    H <- H.simu1[k-1] 
+    M <- M.simu1[k-1]
+    R <- R.simu1[k-1]
+  
+    
+    dR <- (D*(R_0 - R) + s*H/c - u_m*R*M + l_x*M*x(u_m, R,H))*dt
+    dH <- (c*g*x(u_m, R, H)*H*M  - (s*H) - ((fun(u_m,R)*C_a) + C_c)*M*H  )*dt #host can't exist without already being in the system!
+    dM <- (v*(1-(u_m*z))*(C_c + (fun(u_m,R)*C_a))*H*M - l*M)*dt
+  
+    H.simu1[k] <- H + dH
+    M.simu1[k] <- M + dM
+    R.simu1[k] <- R + dR
+    
+}
+# Save end values(@equilibrium) to holding vector.
+H0 <- H.simu1[length(tset)]
+R0 <- R.simu1[length(tset)]
+M_i <- M.simu1[length(tset)]
+
+ 
+   
+
+#H0 <- H.simu2[length(mutset4.4)]
+#R0 <- R.simu2[length(mutset4.4)]
+#M <- M.simu2[length(mutset4.4)]
+#N <- N.simu2[length(mutset4.4)]
+
+
+```
+
+```{r}
+mutset4.4 <- seq(from=0, to= 5500, length.out = 10000)
+H.simu2 <- NaN*mutset4.4; H.simu2[1] <- H0
+M.simu2 <- NaN*mutset4.4;  M.simu2[1] <- .99*M_i
+R.simu2 <- NaN*mutset4.4; R.simu2[1] <- R0
+N.simu2 <- NaN*mutset4.4; N.simu2[1] <- .01*M_i
+
+for(i in 2:length(mutset4.4)){  
+#Setting initial conditions (letting ecological dynamics play out)   
+  
+  
+  dt <- mutset4.4[i] - mutset4.4[i-1] 
+  N <- N.simu2[i-1]; 
+  M <- M.simu2[i-1]; 
+  H <- H.simu2[i-1]; 
+  R <- R.simu2[i-1]; 
+
+    dR <- (D*(R_0 - R) + s*H/c - u_m*R*M + l_x*M*x(u_m, R, H) - u_n*R*N + l_y*N*x(u_n, R, H))*dt
+    dH <- (c*g*x(u_m, R, H)*H*M + c*g*x(u_n, R, H)*H*N - (s*H) - ((fun(u_m,R)*C_a) + C_c)*M*H - ((fun(u_n,R)*C_a) + C_c)*N*H)*dt #host can't exist without already being in the system!
+    dM <- (v*(1-(u_m*z))*(C_c + (fun(u_m,R)*C_a))*H*M - l*M)*dt
+    dN <- (v*(1-(u_n*z))*(C_c + (fun(u_n,R)*C_a))*H*N - l*N)*dt
+    
+  
+H.simu2[i] <- H + dH
+M.simu2[i] <- M + dM
+R.simu2[i] <- R + dR
+N.simu2[i] <- N + dN
+}
+
+plot(mutset4.4,R.simu2,type='l',las=1,lwd=3, ylim = c(0,15),ylab='Abundance',xlab='Time',col=Rcol)
+lines(x = mutset4.4, y = H.simu2, col = Hcol, type = 'l', xlab = 'Time', ylab = 'Population Size',lwd=3,las=1) 
+lines(x = mutset4.4, y = M.simu2, col = Mcol, lwd=3) 
+lines(x = mutset4.4, y = N.simu2, col = Ncol, lwd=3)
+legend('topright' , legend = c('Resource', "Host", "Resident", 'Mutant'), lwd=2, col = c(Rcol, Hcol, Mcol, Ncol), cex = 0.75)
+
+tail(R.simu2)
+  
+```
+
+# When u_m is 0.1, u_n is 0.2
+```{r}
+D <- 0.5 # Dilution Rate (Outflow)
+R_0 <- 25 # Inflow Concentration (Nitrogen)
+l <- 0.05 # fungal mortality
+s <- 0.05 # senescence coefficient
+c <- 0.7 # host's C:N Ratio
+z <- 0.3 #cost of being a mutualist per unit of uptake rate* 
+C_a <- 0.3 #Allocation Carbon
+C_c <- 0.2 #Construction Carbon 
+v <- 0.1  #Conversion efficiency, Host carbon to more symbionts
+a <- 1.747721 # Resource's half-saturation constant.**This is k in equation!**
+l_x <- 0.2 # loss back to R pool per unit of nutrient, let resident and mutant to have the same loss
+l_y <- 0.2
+g <- 0.8 #Tree's per capita groth rate
+u_m <- 0.1 # Resident uptake rate
+u_n <- 0.2 # Mutant uptake rate
+Mcol <- "blue"
+Ncol <- "red"
+Hcol <- "green"
+Rcol <- "brown"
+
+fun <- function(u_m,R){(((u_m)*R)/((a)+R))}
+x <- function(u_m, R, H){(u_m*R)/(l_x + g*H)}
+```
+
+
+```{r}
+
+tset <- seq(from=0, to= 300, length.out = 10000)
+H.simu1 <- NaN*tset; H.simu1[1] <- 1
+M.simu1 <- NaN*tset; M.simu1[1] <- 1
+R.simu1 <- NaN*tset; R.simu1[1] <- 10
+
+ 
+
+
+
+for(k in 2:length(tset)){
+    dt <- tset[k] - tset[k-1] 
+    H <- H.simu1[k-1] 
+    M <- M.simu1[k-1]
+    R <- R.simu1[k-1]
+  
+    
+    dR <- (D*(R_0 - R) + s*H/c - u_m*R*M + l_x*M*x(u_m, R,H))*dt
+    dH <- (c*g*x(u_m, R, H)*H*M  - (s*H) - ((fun(u_m,R)*C_a) + C_c)*M*H  )*dt #host can't exist without already being in the system!
+    dM <- (v*(1-(u_m*z))*(C_c + (fun(u_m,R)*C_a))*H*M - l*M)*dt
+  
+    H.simu1[k] <- H + dH
+    M.simu1[k] <- M + dM
+    R.simu1[k] <- R + dR
+    
+}
+# Save end values(@equilibrium) to holding vector.
+H0 <- H.simu1[length(tset)]
+R0 <- R.simu1[length(tset)]
+M_i <- M.simu1[length(tset)]
+
+ 
+   
+
+#H0 <- H.simu2[length(mutset4.4)]
+#R0 <- R.simu2[length(mutset4.4)]
+#M <- M.simu2[length(mutset4.4)]
+#N <- N.simu2[length(mutset4.4)]
+
+
+```
+
+```{r}
+mutset4.4 <- seq(from=0, to= 1800, length.out = 10000)
+H.simu2 <- NaN*mutset4.4; H.simu2[1] <- H0
+M.simu2 <- NaN*mutset4.4;  M.simu2[1] <- .99*M_i
+R.simu2 <- NaN*mutset4.4; R.simu2[1] <- R0
+N.simu2 <- NaN*mutset4.4; N.simu2[1] <- .01*M_i
+
+for(i in 2:length(mutset4.4)){  
+#Setting initial conditions (letting ecological dynamics play out)   
+  
+  
+  dt <- mutset4.4[i] - mutset4.4[i-1] 
+  N <- N.simu2[i-1]; 
+  M <- M.simu2[i-1]; 
+  H <- H.simu2[i-1]; 
+  R <- R.simu2[i-1]; 
+
+    dR <- (D*(R_0 - R) + s*H/c - u_m*R*M + l_x*M*x(u_m, R, H) - u_n*R*N + l_y*N*x(u_n, R, H))*dt
+    dH <- (c*g*x(u_m, R, H)*H*M + c*g*x(u_n, R, H)*H*N - (s*H) - ((fun(u_m,R)*C_a) + C_c)*M*H - ((fun(u_n,R)*C_a) + C_c)*N*H)*dt #host can't exist without already being in the system!
+    dM <- (v*(1-(u_m*z))*(C_c + (fun(u_m,R)*C_a))*H*M - l*M)*dt
+    dN <- (v*(1-(u_n*z))*(C_c + (fun(u_n,R)*C_a))*H*N - l*N)*dt
+    
+  
+H.simu2[i] <- H + dH
+M.simu2[i] <- M + dM
+R.simu2[i] <- R + dR
+N.simu2[i] <- N + dN
+}
+
+plot(mutset4.4,R.simu2,type='l',las=1,lwd=3, ylim = c(0,20),ylab='Abundance',xlab='Time',col=Rcol)
+lines(x = mutset4.4, y = H.simu2, col = Hcol, type = 'l', xlab = 'Time', ylab = 'Population Size',lwd=3,las=1) 
+lines(x = mutset4.4, y = M.simu2, col = Mcol, lwd=3) 
+lines(x = mutset4.4, y = N.simu2, col = Ncol, lwd=3)
+legend('topright' , legend = c('Resource', "Host", "Resident", 'Mutant'), lwd=2, col = c(Rcol, Hcol, Mcol, Ncol), cex = 0.75)
+
+  
+```
+
+
+# When u_m = 0.8 , u_n = 0.9, PRE-ESS
+```{r}
+D <- 0.5 # Dilution Rate (Outflow)
+R_0 <- 25 # Inflow Concentration (Nitrogen)
+l <- 0.05 # fungal mortality
+s <- 0.05 # senescence coefficient
+c <- 0.7 # host's C:N Ratio
+z <- 0.3 #cost of being a mutualist per unit of uptake rate* 
+C_a <- 0.3 #Allocation Carbon
+C_c <- 0.2 #Construction Carbon 
+v <- 0.1  #Conversion efficiency, Host carbon to more symbionts
+a <- 1.747721 # Resource's half-saturation constant.**This is k in equation!**
+l_x <- 0.2 # loss back to R pool per unit of nutrient, let resident and mutant to have the same loss
+l_y <- 0.2
+g <- 0.8 #Tree's per capita groth rate
+u_m <- 0.8 # Resident uptake rate
+u_n <- 0.9 # Mutant uptake rate
+Mcol <- "blue"
+Ncol <- "red"
+Hcol <- "green"
+Rcol <- "brown"
+
+fun <- function(u_m,R){(((u_m)*R)/((a)+R))}
+x <- function(u_m, R, H){(u_m*R)/(l_x + g*H)}
+```
+
+
+```{r}
+
+tset <- seq(from=0, to= 300, length.out = 10000)
+H.simu1 <- NaN*tset; H.simu1[1] <- 1
+M.simu1 <- NaN*tset; M.simu1[1] <- 1
+R.simu1 <- NaN*tset; R.simu1[1] <- 10
+
+ 
+
+
+
+for(k in 2:length(tset)){
+    dt <- tset[k] - tset[k-1] 
+    H <- H.simu1[k-1] 
+    M <- M.simu1[k-1]
+    R <- R.simu1[k-1]
+  
+    
+    dR <- (D*(R_0 - R) + s*H/c - u_m*R*M + l_x*M*x(u_m, R,H))*dt
+    dH <- (c*g*x(u_m, R, H)*H*M  - (s*H) - ((fun(u_m,R)*C_a) + C_c)*M*H  )*dt #host can't exist without already being in the system!
+    dM <- (v*(1-(u_m*z))*(C_c + (fun(u_m,R)*C_a))*H*M - l*M)*dt
+  
+    H.simu1[k] <- H + dH
+    M.simu1[k] <- M + dM
+    R.simu1[k] <- R + dR
+    
+}
+# Save end values(@equilibrium) to holding vector.
+H0 <- H.simu1[length(tset)]
+R0 <- R.simu1[length(tset)]
+M_i <- M.simu1[length(tset)]
+
+ 
+   
+
+#H0 <- H.simu2[length(mutset4.4)]
+#R0 <- R.simu2[length(mutset4.4)]
+#M <- M.simu2[length(mutset4.4)]
+#N <- N.simu2[length(mutset4.4)]
+
+
+```
+
+```{r}
+mutset4.4 <- seq(from=0, to= 2000, length.out = 10000)
+H.simu2 <- NaN*mutset4.4; H.simu2[1] <- H0
+M.simu2 <- NaN*mutset4.4;  M.simu2[1] <- .99*M_i
+R.simu2 <- NaN*mutset4.4; R.simu2[1] <- R0
+N.simu2 <- NaN*mutset4.4; N.simu2[1] <- .01*M_i
+
+for(i in 2:length(mutset4.4)){  
+#Setting initial conditions (letting ecological dynamics play out)   
+  
+  
+  dt <- mutset4.4[i] - mutset4.4[i-1] 
+  N <- N.simu2[i-1]; 
+  M <- M.simu2[i-1]; 
+  H <- H.simu2[i-1]; 
+  R <- R.simu2[i-1]; 
+
+    dR <- (D*(R_0 - R) + s*H/c - u_m*R*M + l_x*M*x(u_m, R, H) - u_n*R*N + l_y*N*x(u_n, R, H))*dt
+    dH <- (c*g*x(u_m, R, H)*H*M + c*g*x(u_n, R, H)*H*N - (s*H) - ((fun(u_m,R)*C_a) + C_c)*M*H - ((fun(u_n,R)*C_a) + C_c)*N*H)*dt #host can't exist without already being in the system!
+    dM <- (v*(1-(u_m*z))*(C_c + (fun(u_m,R)*C_a))*H*M - l*M)*dt
+    dN <- (v*(1-(u_n*z))*(C_c + (fun(u_n,R)*C_a))*H*N - l*N)*dt
+    
+  
+H.simu2[i] <- H + dH
+M.simu2[i] <- M + dM
+R.simu2[i] <- R + dR
+N.simu2[i] <- N + dN
+}
+
+plot(mutset4.4,R.simu2,type='l',las=1,lwd=3, ylim = c(0,13),ylab='Abundance',xlab='Time',col=Rcol)
+lines(x = mutset4.4, y = H.simu2, col = Hcol, type = 'l', xlab = 'Time', ylab = 'Population Size',lwd=3,las=1) 
+lines(x = mutset4.4, y = M.simu2, col = Mcol, lwd=3) 
+lines(x = mutset4.4, y = N.simu2, col = Ncol, lwd=3)
+legend('topright' , legend = c('Resource', "Host", "Resident", 'Mutant'), lwd=2, col = c(Rcol, Hcol, Mcol, Ncol), cex = 0.75)
+
+  
+```
+
+
+# When u_m is 0.85, u_n is 0.90, THE ESS
+```{r}
+D <- 0.5 # Dilution Rate (Outflow)
+R_0 <- 25 # Inflow Concentration (Nitrogen)
+l <- 0.05 # fungal mortality
+s <- 0.05 # senescence coefficient
+c <- 0.7 # host's C:N Ratio
+z <- 0.3 #cost of being a mutualist per unit of uptake rate* 
+C_a <- 0.3 #Allocation Carbon
+C_c <- 0.2 #Construction Carbon 
+v <- 0.1  #Conversion efficiency, Host carbon to more symbionts
+a <- 1.747721 # Resource's half-saturation constant.**This is k in equation!**
+l_x <- 0.2 # loss back to R pool per unit of nutrient, let resident and mutant to have the same loss
+l_y <- 0.2
+g <- 0.8 #Tree's per capita groth rate
+u_m <- 0.85 # Resident uptake rate
+u_n <- 0.9 # Mutant uptake rate
+Mcol <- "blue"
+Ncol <- "red"
+Hcol <- "green"
+Rcol <- "brown"
+
+fun <- function(u_m,R){(((u_m)*R)/((a)+R))}
+x <- function(u_m, R, H){(u_m*R)/(l_x + g*H)}
+```
+
+
+```{r}
+
+tset <- seq(from=0, to= 300, length.out = 10000)
+H.simu1 <- NaN*tset; H.simu1[1] <- 1
+M.simu1 <- NaN*tset; M.simu1[1] <- 1
+R.simu1 <- NaN*tset; R.simu1[1] <- 10
+
+ 
+
+
+
+for(k in 2:length(tset)){
+    dt <- tset[k] - tset[k-1] 
+    H <- H.simu1[k-1] 
+    M <- M.simu1[k-1]
+    R <- R.simu1[k-1]
+  
+    
+    dR <- (D*(R_0 - R) + s*H/c - u_m*R*M + l_x*M*x(u_m, R,H))*dt
+    dH <- (c*g*x(u_m, R, H)*H*M  - (s*H) - ((fun(u_m,R)*C_a) + C_c)*M*H  )*dt #host can't exist without already being in the system!
+    dM <- (v*(1-(u_m*z))*(C_c + (fun(u_m,R)*C_a))*H*M - l*M)*dt
+  
+    H.simu1[k] <- H + dH
+    M.simu1[k] <- M + dM
+    R.simu1[k] <- R + dR
+    
+}
+# Save end values(@equilibrium) to holding vector.
+H0 <- H.simu1[length(tset)]
+R0 <- R.simu1[length(tset)]
+M_i <- M.simu1[length(tset)]
+
+ 
+   
+
+#H0 <- H.simu2[length(mutset4.4)]
+#R0 <- R.simu2[length(mutset4.4)]
+#M <- M.simu2[length(mutset4.4)]
+#N <- N.simu2[length(mutset4.4)]
+
+
+```
+
+```{r}
+mutset4.4 <- seq(from=0, to= 800, length.out = 10000)
+H.simu2 <- NaN*mutset4.4; H.simu2[1] <- H0
+M.simu2 <- NaN*mutset4.4;  M.simu2[1] <- .99*M_i
+R.simu2 <- NaN*mutset4.4; R.simu2[1] <- R0
+N.simu2 <- NaN*mutset4.4; N.simu2[1] <- .01*M_i
+
+for(i in 2:length(mutset4.4)){  
+#Setting initial conditions (letting ecological dynamics play out)   
+  
+  
+  dt <- mutset4.4[i] - mutset4.4[i-1] 
+  N <- N.simu2[i-1]; 
+  M <- M.simu2[i-1]; 
+  H <- H.simu2[i-1]; 
+  R <- R.simu2[i-1]; 
+
+    dR <- (D*(R_0 - R) + s*H/c - u_m*R*M + l_x*M*x(u_m, R, H) - u_n*R*N + l_y*N*x(u_n, R, H))*dt
+    dH <- (c*g*x(u_m, R, H)*H*M + c*g*x(u_n, R, H)*H*N - (s*H) - ((fun(u_m,R)*C_a) + C_c)*M*H - ((fun(u_n,R)*C_a) + C_c)*N*H)*dt #host can't exist without already being in the system!
+    dM <- (v*(1-(u_m*z))*(C_c + (fun(u_m,R)*C_a))*H*M - l*M)*dt
+    dN <- (v*(1-(u_n*z))*(C_c + (fun(u_n,R)*C_a))*H*N - l*N)*dt
+    
+  
+H.simu2[i] <- H + dH
+M.simu2[i] <- M + dM
+R.simu2[i] <- R + dR
+N.simu2[i] <- N + dN
+}
+
+plot(mutset4.4,R.simu2,type='l',las=1,lwd=3, ylim = c(0,13),ylab='Abundance',xlab='Time',col=Rcol)
+lines(x = mutset4.4, y = H.simu2, col = Hcol, type = 'l', xlab = 'Time', ylab = 'Population Size',lwd=3,las=1) 
+lines(x = mutset4.4, y = M.simu2, col = Mcol, lwd=3) 
+lines(x = mutset4.4, y = N.simu2, col = Ncol, lwd=3)
+legend('topright' , legend = c('Resource', "Host", "Resident", 'Mutant'), lwd=2, col = c(Rcol, Hcol, Mcol, Ncol), cex = 0.75)
+
+  
+```
+
+# When u_m is 0.9, u_n is 0.95, Potential ESS
+```{r}
+D <- 0.5 # Dilution Rate (Outflow)
+R_0 <- 25 # Inflow Concentration (Nitrogen)
+l <- 0.05 # fungal mortality
+s <- 0.05 # senescence coefficient
+c <- 0.7 # host's C:N Ratio
+z <- 0.3 #cost of being a mutualist per unit of uptake rate* 
+C_a <- 0.3 #Allocation Carbon
+C_c <- 0.2 #Construction Carbon 
+v <- 0.1  #Conversion efficiency, Host carbon to more symbionts
+a <- 1.747721 # Resource's half-saturation constant.**This is k in equation!**
+l_x <- 0.2 # loss back to R pool per unit of nutrient, let resident and mutant to have the same loss
+l_y <- 0.2
+g <- 0.8 #Tree's per capita groth rate
+u_m <- 0.9 # Resident uptake rate
+u_n <- 0.95 # Mutant uptake rate
+Mcol <- "blue"
+Ncol <- "red"
+Hcol <- "green"
+Rcol <- "brown"
+
+fun <- function(u_m,R){(((u_m)*R)/((a)+R))}
+x <- function(u_m, R, H){(u_m*R)/(l_x + g*H)}
+```
+
+
+```{r}
+
+tset <- seq(from=0, to= 300, length.out = 10000)
+H.simu1 <- NaN*tset; H.simu1[1] <- 1
+M.simu1 <- NaN*tset; M.simu1[1] <- 1
+R.simu1 <- NaN*tset; R.simu1[1] <- 10
+
+ 
+
+
+
+for(k in 2:length(tset)){
+    dt <- tset[k] - tset[k-1] 
+    H <- H.simu1[k-1] 
+    M <- M.simu1[k-1]
+    R <- R.simu1[k-1]
+  
+    
+    dR <- (D*(R_0 - R) + s*H/c - u_m*R*M + l_x*M*x(u_m, R,H))*dt
+    dH <- (c*g*x(u_m, R, H)*H*M  - (s*H) - ((fun(u_m,R)*C_a) + C_c)*M*H  )*dt #host can't exist without already being in the system!
+    dM <- (v*(1-(u_m*z))*(C_c + (fun(u_m,R)*C_a))*H*M - l*M)*dt
+  
+    H.simu1[k] <- H + dH
+    M.simu1[k] <- M + dM
+    R.simu1[k] <- R + dR
+    
+}
+# Save end values(@equilibrium) to holding vector.
+H0 <- H.simu1[length(tset)]
+R0 <- R.simu1[length(tset)]
+M_i <- M.simu1[length(tset)]
+
+ 
+   
+
+#H0 <- H.simu2[length(mutset4.4)]
+#R0 <- R.simu2[length(mutset4.4)]
+#M <- M.simu2[length(mutset4.4)]
+#N <- N.simu2[length(mutset4.4)]
+
+
+```
+
+```{r}
+mutset4.4 <- seq(from=0, to= 2015, length.out = 10000)
+H.simu2 <- NaN*mutset4.4; H.simu2[1] <- H0
+M.simu2 <- NaN*mutset4.4;  M.simu2[1] <- .99*M_i
+R.simu2 <- NaN*mutset4.4; R.simu2[1] <- R0
+N.simu2 <- NaN*mutset4.4; N.simu2[1] <- .01*M_i
+
+for(i in 2:length(mutset4.4)){  
+#Setting initial conditions (letting ecological dynamics play out)   
+  
+  
+  dt <- mutset4.4[i] - mutset4.4[i-1] 
+  N <- N.simu2[i-1]; 
+  M <- M.simu2[i-1]; 
+  H <- H.simu2[i-1]; 
+  R <- R.simu2[i-1]; 
+
+    dR <- (D*(R_0 - R) + s*H/c - u_m*R*M + l_x*M*x(u_m, R, H) - u_n*R*N + l_y*N*x(u_n, R, H))*dt
+    dH <- (c*g*x(u_m, R, H)*H*M + c*g*x(u_n, R, H)*H*N - (s*H) - ((fun(u_m,R)*C_a) + C_c)*M*H - ((fun(u_n,R)*C_a) + C_c)*N*H)*dt #host can't exist without already being in the system!
+    dM <- (v*(1-(u_m*z))*(C_c + (fun(u_m,R)*C_a))*H*M - l*M)*dt
+    dN <- (v*(1-(u_n*z))*(C_c + (fun(u_n,R)*C_a))*H*N - l*N)*dt
+    
+  
+H.simu2[i] <- H + dH
+M.simu2[i] <- M + dM
+R.simu2[i] <- R + dR
+N.simu2[i] <- N + dN
+}
+
+plot(mutset4.4,R.simu2,type='l',las=1,lwd=3, ylim = c(0,20),ylab='Abundance',xlab='Time',col=Rcol)
+lines(x = mutset4.4, y = H.simu2, col = Hcol, type = 'l', xlab = 'Time', ylab = 'Population Size',lwd=3,las=1) 
+lines(x = mutset4.4, y = M.simu2, col = Mcol, lwd=3) 
+lines(x = mutset4.4, y = N.simu2, col = Ncol, lwd=3)
+legend('topright' , legend = c('Resource', "Host", "Resident", 'Mutant'), lwd=2, col = c(Rcol, Hcol, Mcol, Ncol), cex = 0.75)
+
+tail(N.simu2)
+tail(M.simu2)
+tail(R.simu2)
+```
+
+# What's so special about 0.55? Why does host starts increasing there? Why isit the threshold for host increments? When u =0.4
+```{r}
+D <- 0.5 # Dilution Rate (Outflow)
+R_0 <- 25 # Inflow Concentration (Nitrogen)
+l <- 0.05 # fungal mortality
+s <- 0.05 # senescence coefficient
+c <- 0.7 # host's C:N Ratio
+z <- 0.3 #cost of being a mutualist per unit of uptake rate* 
+C_a <- 0.3 #Allocation Carbon
+C_c <- 0.2 #Construction Carbon 
+v <- 0.1  #Conversion efficiency, Host carbon to more symbionts
+a <- 1.747721 # Resource's half-saturation constant.**This is k in equation!**
+l_x <- 0.2 # loss back to R pool per unit of nutrient, let resident and mutant to have the same loss
+l_y <- 0.2
+g <- 0.8 #Tree's per capita groth rate
+u_m <- 0.4 # Resident uptake rate
+u_n <- 0.4 # Mutant uptake rate
+Mcol <- "blue"
+Ncol <- "red"
+Hcol <- "green"
+Rcol <- "brown"
+
+fun <- function(u_m,R){(((u_m)*R)/((a)+R))}
+x <- function(u_m, R, H){(u_m*R)/(l_x + g*H)}
+```
+
+
+```{r}
+
+tset <- seq(from=0, to= 300, length.out = 10000)
+H.simu1 <- NaN*tset; H.simu1[1] <- 1
+M.simu1 <- NaN*tset; M.simu1[1] <- 1
+R.simu1 <- NaN*tset; R.simu1[1] <- 10
+
+for(k in 2:length(tset)){
+    dt <- tset[k] - tset[k-1] 
+    H <- H.simu1[k-1] 
+    M <- M.simu1[k-1]
+    R <- R.simu1[k-1]
+  
+    
+    dR <- (D*(R_0 - R) + s*H/c - u_m*R*M + l_x*M*x(u_m, R,H))*dt
+    dH <- (c*g*x(u_m, R, H)*H*M  - (s*H) - ((fun(u_m,R)*C_a) + C_c)*M*H  )*dt #host can't exist without already being in the system!
+    dM <- (v*(1-(u_m*z))*(C_c + (fun(u_m,R)*C_a))*H*M - l*M)*dt
+  
+    H.simu1[k] <- H + dH
+    M.simu1[k] <- M + dM
+    R.simu1[k] <- R + dR
+    
+}
+# Save end values(@equilibrium) to holding vector.
+H0 <- H.simu1[length(tset)]
+R0 <- R.simu1[length(tset)]
+M_i <- M.simu1[length(tset)]
+
+```
+
+```{r}
+mutset4.4 <- seq(from=0, to= 800, length.out = 10000)
+H.simu2 <- NaN*mutset4.4; H.simu2[1] <- H0
+M.simu2 <- NaN*mutset4.4;  M.simu2[1] <- .99*M_i
+R.simu2 <- NaN*mutset4.4; R.simu2[1] <- R0
+N.simu2 <- NaN*mutset4.4; N.simu2[1] <- .01*M_i
+
+for(i in 2:length(mutset4.4)){  
+#Setting initial conditions (letting ecological dynamics play out)   
+  
+  
+  dt <- mutset4.4[i] - mutset4.4[i-1] 
+  N <- N.simu2[i-1]; 
+  M <- M.simu2[i-1]; 
+  H <- H.simu2[i-1]; 
+  R <- R.simu2[i-1]; 
+
+    dR <- (D*(R_0 - R) + s*H/c - u_m*R*M + l_x*M*x(u_m, R, H) - u_n*R*N + l_y*N*x(u_n, R, H))*dt
+    dH <- (c*g*x(u_m, R, H)*H*M + c*g*x(u_n, R, H)*H*N - (s*H) - ((fun(u_m,R)*C_a) + C_c)*M*H - ((fun(u_n,R)*C_a) + C_c)*N*H)*dt #host can't exist without already being in the system!
+    dM <- (v*(1-(u_m*z))*(C_c + (fun(u_m,R)*C_a))*H*M - l*M)*dt
+    dN <- (v*(1-(u_n*z))*(C_c + (fun(u_n,R)*C_a))*H*N - l*N)*dt
+    
+  
+H.simu2[i] <- H + dH
+M.simu2[i] <- M + dM
+R.simu2[i] <- R + dR
+N.simu2[i] <- N + dN
+}
+
+plot(mutset4.4,R.simu2,type='l',las=1,lwd=3, ylim = c(0,20),ylab='Abundance',xlab='Time',col=Rcol)
+lines(x = mutset4.4, y = H.simu2, col = Hcol, type = 'l', xlab = 'Time', ylab = 'Population Size',lwd=3,las=1) 
+lines(x = mutset4.4, y = M.simu2, col = Mcol, lwd=3) 
+lines(x = mutset4.4, y = N.simu2, col = Ncol, lwd=3)
+legend('topright' , legend = c('Resource', "Host", "Resident", 'Mutant'), lwd=2, col = c(Rcol, Hcol, Mcol, Ncol), cex = 0.75)
+
+tail(H.simu2)  
+tail(R.simu2)
+tail(M.simu2)
+tail(N.simu2)
+```
+
+#When u =0.5
+```{r}
+D <- 0.5 # Dilution Rate (Outflow)
+R_0 <- 25 # Inflow Concentration (Nitrogen)
+l <- 0.05 # fungal mortality
+s <- 0.05 # senescence coefficient
+c <- 0.7 # host's C:N Ratio
+z <- 0.3 #cost of being a mutualist per unit of uptake rate* 
+C_a <- 0.3 #Allocation Carbon
+C_c <- 0.2 #Construction Carbon 
+v <- 0.1  #Conversion efficiency, Host carbon to more symbionts
+a <- 1.747721 # Resource's half-saturation constant.**This is k in equation!**
+l_x <- 0.2 # loss back to R pool per unit of nutrient, let resident and mutant to have the same loss
+l_y <- 0.2
+g <- 0.8 #Tree's per capita groth rate
+u_m <- 0.5 # Resident uptake rate
+u_n <- 0.5 # Mutant uptake rate
+Mcol <- "blue"
+Ncol <- "red"
+Hcol <- "green"
+Rcol <- "brown"
+
+fun <- function(u_m,R){(((u_m)*R)/((a)+R))}
+x <- function(u_m, R, H){(u_m*R)/(l_x + g*H)}
+```
+
+
+```{r}
+
+tset <- seq(from=0, to= 300, length.out = 10000)
+H.simu1 <- NaN*tset; H.simu1[1] <- 1
+M.simu1 <- NaN*tset; M.simu1[1] <- 1
+R.simu1 <- NaN*tset; R.simu1[1] <- 10
+
+for(k in 2:length(tset)){
+    dt <- tset[k] - tset[k-1] 
+    H <- H.simu1[k-1] 
+    M <- M.simu1[k-1]
+    R <- R.simu1[k-1]
+  
+    
+    dR <- (D*(R_0 - R) + s*H/c - u_m*R*M + l_x*M*x(u_m, R,H))*dt
+    dH <- (c*g*x(u_m, R, H)*H*M  - (s*H) - ((fun(u_m,R)*C_a) + C_c)*M*H  )*dt #host can't exist without already being in the system!
+    dM <- (v*(1-(u_m*z))*(C_c + (fun(u_m,R)*C_a))*H*M - l*M)*dt
+  
+    H.simu1[k] <- H + dH
+    M.simu1[k] <- M + dM
+    R.simu1[k] <- R + dR
+    
+}
+# Save end values(@equilibrium) to holding vector.
+H0 <- H.simu1[length(tset)]
+R0 <- R.simu1[length(tset)]
+M_i <- M.simu1[length(tset)]
+
+```
+
+```{r}
+mutset4.4 <- seq(from=0, to= 800, length.out = 10000)
+H.simu2 <- NaN*mutset4.4; H.simu2[1] <- H0
+M.simu2 <- NaN*mutset4.4;  M.simu2[1] <- .99*M_i
+R.simu2 <- NaN*mutset4.4; R.simu2[1] <- R0
+N.simu2 <- NaN*mutset4.4; N.simu2[1] <- .01*M_i
+
+for(i in 2:length(mutset4.4)){  
+#Setting initial conditions (letting ecological dynamics play out)   
+  
+  
+  dt <- mutset4.4[i] - mutset4.4[i-1] 
+  N <- N.simu2[i-1]; 
+  M <- M.simu2[i-1]; 
+  H <- H.simu2[i-1]; 
+  R <- R.simu2[i-1]; 
+
+    dR <- (D*(R_0 - R) + s*H/c - u_m*R*M + l_x*M*x(u_m, R, H) - u_n*R*N + l_y*N*x(u_n, R, H))*dt
+    dH <- (c*g*x(u_m, R, H)*H*M + c*g*x(u_n, R, H)*H*N - (s*H) - ((fun(u_m,R)*C_a) + C_c)*M*H - ((fun(u_n,R)*C_a) + C_c)*N*H)*dt #host can't exist without already being in the system!
+    dM <- (v*(1-(u_m*z))*(C_c + (fun(u_m,R)*C_a))*H*M - l*M)*dt
+    dN <- (v*(1-(u_n*z))*(C_c + (fun(u_n,R)*C_a))*H*N - l*N)*dt
+    
+  
+H.simu2[i] <- H + dH
+M.simu2[i] <- M + dM
+R.simu2[i] <- R + dR
+N.simu2[i] <- N + dN
+}
+
+plot(mutset4.4,R.simu2,type='l',las=1,lwd=3, ylim = c(0,20),ylab='Abundance',xlab='Time',col=Rcol)
+lines(x = mutset4.4, y = H.simu2, col = Hcol, type = 'l', xlab = 'Time', ylab = 'Population Size',lwd=3,las=1) 
+lines(x = mutset4.4, y = M.simu2, col = Mcol, lwd=3) 
+lines(x = mutset4.4, y = N.simu2, col = Ncol, lwd=3)
+legend('topright' , legend = c('Resource', "Host", "Resident", 'Mutant'), lwd=2, col = c(Rcol, Hcol, Mcol, Ncol), cex = 0.75)
+
+tail(H.simu2)  
+tail(R.simu2)
+tail(M.simu2)
+tail(N.simu2)
+```
+
+#When u =0.55, where hosts starts to increase.
+```{r}
+D <- 0.5 # Dilution Rate (Outflow)
+R_0 <- 25 # Inflow Concentration (Nitrogen)
+l <- 0.05 # fungal mortality
+s <- 0.05 # senescence coefficient
+c <- 0.7 # host's C:N Ratio
+z <- 0.3 #cost of being a mutualist per unit of uptake rate* 
+C_a <- 0.3 #Allocation Carbon
+C_c <- 0.2 #Construction Carbon 
+v <- 0.1  #Conversion efficiency, Host carbon to more symbionts
+a <- 1.747721 # Resource's half-saturation constant.**This is k in equation!**
+l_x <- 0.2 # loss back to R pool per unit of nutrient, let resident and mutant to have the same loss
+l_y <- 0.2
+g <- 0.8 #Tree's per capita groth rate
+u_m <- 0.55 # Resident uptake rate
+u_n <- 0.55 # Mutant uptake rate
+Mcol <- "blue"
+Ncol <- "red"
+Hcol <- "green"
+Rcol <- "brown"
+
+fun <- function(u_m,R){(((u_m)*R)/((a)+R))}
+x <- function(u_m, R, H){(u_m*R)/(l_x + g*H)}
+```
+
+
+```{r}
+
+tset <- seq(from=0, to= 300, length.out = 10000)
+H.simu1 <- NaN*tset; H.simu1[1] <- 1
+M.simu1 <- NaN*tset; M.simu1[1] <- 1
+R.simu1 <- NaN*tset; R.simu1[1] <- 10
+
+for(k in 2:length(tset)){
+    dt <- tset[k] - tset[k-1] 
+    H <- H.simu1[k-1] 
+    M <- M.simu1[k-1]
+    R <- R.simu1[k-1]
+  
+    
+    dR <- (D*(R_0 - R) + s*H/c - u_m*R*M + l_x*M*x(u_m, R,H))*dt
+    dH <- (c*g*x(u_m, R, H)*H*M  - (s*H) - ((fun(u_m,R)*C_a) + C_c)*M*H  )*dt #host can't exist without already being in the system!
+    dM <- (v*(1-(u_m*z))*(C_c + (fun(u_m,R)*C_a))*H*M - l*M)*dt
+  
+    H.simu1[k] <- H + dH
+    M.simu1[k] <- M + dM
+    R.simu1[k] <- R + dR
+    
+}
+# Save end values(@equilibrium) to holding vector.
+H0 <- H.simu1[length(tset)]
+R0 <- R.simu1[length(tset)]
+M_i <- M.simu1[length(tset)]
+
+```
+
+```{r}
+mutset4.4 <- seq(from=0, to= 800, length.out = 10000)
+H.simu2 <- NaN*mutset4.4; H.simu2[1] <- H0
+M.simu2 <- NaN*mutset4.4;  M.simu2[1] <- .99*M_i
+R.simu2 <- NaN*mutset4.4; R.simu2[1] <- R0
+N.simu2 <- NaN*mutset4.4; N.simu2[1] <- .01*M_i
+
+for(i in 2:length(mutset4.4)){  
+#Setting initial conditions (letting ecological dynamics play out)   
+  
+  
+  dt <- mutset4.4[i] - mutset4.4[i-1] 
+  N <- N.simu2[i-1]; 
+  M <- M.simu2[i-1]; 
+  H <- H.simu2[i-1]; 
+  R <- R.simu2[i-1]; 
+
+    dR <- (D*(R_0 - R) + s*H/c - u_m*R*M + l_x*M*x(u_m, R, H) - u_n*R*N + l_y*N*x(u_n, R, H))*dt
+    dH <- (c*g*x(u_m, R, H)*H*M + c*g*x(u_n, R, H)*H*N - (s*H) - ((fun(u_m,R)*C_a) + C_c)*M*H - ((fun(u_n,R)*C_a) + C_c)*N*H)*dt #host can't exist without already being in the system!
+    dM <- (v*(1-(u_m*z))*(C_c + (fun(u_m,R)*C_a))*H*M - l*M)*dt
+    dN <- (v*(1-(u_n*z))*(C_c + (fun(u_n,R)*C_a))*H*N - l*N)*dt
+    
+  
+H.simu2[i] <- H + dH
+M.simu2[i] <- M + dM
+R.simu2[i] <- R + dR
+N.simu2[i] <- N + dN
+}
+
+plot(mutset4.4,R.simu2,type='l',las=1,lwd=3, ylim = c(0,20),ylab='Abundance',xlab='Time',col=Rcol)
+lines(x = mutset4.4, y = H.simu2, col = Hcol, type = 'l', xlab = 'Time', ylab = 'Population Size',lwd=3,las=1) 
+lines(x = mutset4.4, y = M.simu2, col = Mcol, lwd=3) 
+lines(x = mutset4.4, y = N.simu2, col = Ncol, lwd=3)
+legend('topright' , legend = c('Resource', "Host", "Resident", 'Mutant'), lwd=2, col = c(Rcol, Hcol, Mcol, Ncol), cex = 0.75)
+
+tail(H.simu2)  
+tail(R.simu2)
+tail(M.simu2)
+tail(N.simu2)
+```
