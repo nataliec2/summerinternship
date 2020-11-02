@@ -24,8 +24,8 @@ fun <- function(u_m,R){(((u_m)*R)/((a)+R))}
 x <- function(u_m, R, H){(u_m*R)/(l_x + g*H)}
 ```
 
-
-# Removed mortality component of symbiont
+# First I shall be recording R*, H* and M*.
+# Here's M* v.s. u_m
 ```{r}
 uset <- seq(1/20, 1, 1/20)
 Mset <- NaN*uset
