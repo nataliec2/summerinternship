@@ -53,7 +53,7 @@ D <- 0.5 # Dilution Rate (Outflow)
 R_0 <- 25 # Inflow Concentration (Nitrogen)
 l <- 0.05 # fungal mortality
 s <- 0.05 # senescence coefficient
-c <- 0.7 # host's C:N Ratio
+c <- 0.7 # host's C:N Ratio what will changing you do.. what is the ACTUAL C:N ratio?
 z <- 0.3 #cost of being a mutualist per unit of uptake rate* 
 C_a <- 0.3 #Allocation Carbon
 C_c <- 0.2 #Construction Carbon 
@@ -156,7 +156,7 @@ if(is.na(numberofreps)){print("#ofreps is not a number")}
    library('plot.matrix')
   Mutant_percentage4<-mutset4.0
  par(mar = c(4,4,4,4))
-  plot(Mutant_percentage4, border= NA, fmt.cell='%.3f', fmt.key ="%.2f", breaks = c(-0.1,0.011,.99,1),xlab= "Mutant Uptake Rate, u_n", ylab = "Resident Uptake Rate, u_m", col = c('white','grey','black') ) 
+  plot(Mutant_percentage4, border= NA, fmt.key ="%.2f", breaks = c(-0.1,0.012,1),xlab= "Mutant Uptake Rate, u_n", ylab = "Resident Uptake Rate, u_m", col = c('white','black') ) 
 ```
 
 # Record Average resident uptake rate at each mutation round.
