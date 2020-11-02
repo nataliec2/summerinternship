@@ -1,0 +1,242 @@
+---
+title: "Bifurcation_Diagrams_2.0"
+author: "Natalie Chong"
+date: "8/9/2020"
+output: html_document
+---
+# This Markdown records my attempt to break down the Host equation to figure out how each part changes with uptake rate!
+```{r}
+D <- 0.5 # Dilution Rate (Outflow)
+R_0 <- 25 # Inflow Concentration (Nitrogen)
+l <- 0.05 # fungal mortality
+s <- 0.05 # senescence coefficient
+c <- 0.7 # host's C:N Ratio
+z <- 0.3 #cost of being a mutualist per unit of uptake rate* 
+C_a <- 0.3 #Allocation Carbon
+C_c <- 0.2 #Construction Carbon 
+v <- 0.1  #Conversion efficiency, Host carbon to more symbionts
+a <- 1.747721 # Resource's half-saturation constant.**This is k in equation!**
+l_x <- 0.2 # loss back to R pool per unit of nutrient, let resident and mutant to have the same loss
+l_y <- 0.2
+g <- 0.8 #Tree's per capita groth rate
+
+fun <- function(u_m,R){(((u_m)*R)/((a)+R))}
+x <- function(u_m, R, H){(u_m*R)/(l_x + g*H)}
+```
+
+
+# Removed mortality component of symbiont
+```{r}
+uset <- seq(1/20, 1, 1/20)
+Mset <- NaN*uset
+
+for(i in 1:length(uset)){ #for every placeholder i from 1 to the entire length of uset.
+  u_m <- as.numeric(uset[i]) # set u_m as a numeric number.
+tset <- seq(from=0, to= 300, length.out = 10000) #setting initial conditions, setting a time sequence that starts from 0 to 300, sliced in 10000 pieces. 
+H.simu1 <- NaN*tset; H.simu1[1] <- 1 #fill variables with NaNs, to the length of how long tset is. Also set intial conditions.
+M.simu1 <- NaN*tset; M.simu1[1] <- 1
+R.simu1 <- NaN*tset; R.simu1[1] <- 10
+
+for(k in 2:length(tset)){
+    dt <- tset[k] - tset[k-1] 
+    H <- H.simu1[k-1] 
+    M <- M.simu1[k-1]
+    R <- R.simu1[k-1]
+  
+    
+    dR <- (D*(R_0 - R) + s*H/c - u_m*R*M + l_x*M*x(u_m, R,H))*dt
+    dH <- (c*g*x(u_m, R, H)*H*M  - (s*H) - ((fun(u_m,R)*C_a) + C_c)*M*H  )*dt #host can't exist without already being in the system!
+    dM <- (v*(1-(u_m*z))*(C_c + (fun(u_m,R)*C_a))*H*M - l*M)*dt
+  
+    
+    H.simu1[k] <- H + dH
+    M.simu1[k] <- M + dM
+    R.simu1[k] <- R + dR
+    
+}
+Mset[i] <- M.simu1[length(tset)]
+
+}
+
+plot(uset, Mset, type='l', lwd=2, xlab = "Uptake Rate, u_m", ylab = "Resident Abundance at equilibrium, M*", col = 'blue')
+```
+
+# Plotting R* as a function of uptake rate
+```{r}
+uset <- seq(1/20, 1, 1/20)
+Rset <- NaN*uset
+
+for(i in 1:length(uset)){
+  u_m <- as.numeric(uset[i])
+tset <- seq(from=0, to= 300, length.out = 10000)
+H.simu1 <- NaN*tset; H.simu1[1] <- 1
+M.simu1 <- NaN*tset; M.simu1[1] <- 1
+R.simu1 <- NaN*tset; R.simu1[1] <- 10
+
+for(k in 2:length(tset)){
+    dt <- tset[k] - tset[k-1] 
+    H <- H.simu1[k-1] 
+    M <- M.simu1[k-1]
+    R <- R.simu1[k-1]
+  
+    
+    dR <- (D*(R_0 - R) + s*H/c - u_m*R*M + l_x*M*x(u_m, R,H))*dt
+    dH <- (c*g*x(u_m, R, H)*H*M  - (s*H) - ((fun(u_m,R)*C_a) + C_c)*M*H  )*dt #added H term in the positive portion of the equation, host can't exist without already being in the system!
+    dM <- (v*(1-(u_m*z))*(C_c + (fun(u_m,R)*C_a))*H*M - l*M)*dt
+  
+    
+    H.simu1[k] <- H + dH
+    M.simu1[k] <- M + dM
+    R.simu1[k] <- R + dR
+    
+}
+Rset[i] <- R.simu1[length(tset)]
+
+}
+
+plot(uset, Rset, type='l', col = Rcol, lwd=2, xlab = "Uptake Rate, u_m", ylab = "Host Abundance at equilibrium, R*")
+```
+
+#Plotting H* as a function of uptake rate
+```{r}
+uset <- seq(1/20, 1, 1/20)
+Hset <- NaN*uset
+
+for(i in 1:length(uset)){
+  u_m <- as.numeric(uset[i])
+tset <- seq(from=0, to= 300, length.out = 10000)
+H.simu1 <- NaN*tset; H.simu1[1] <- 1
+M.simu1 <- NaN*tset; M.simu1[1] <- 1
+R.simu1 <- NaN*tset; R.simu1[1] <- 10
+
+for(k in 2:length(tset)){
+    dt <- tset[k] - tset[k-1] 
+    H <- H.simu1[k-1] 
+    M <- M.simu1[k-1]
+    R <- R.simu1[k-1]
+  
+    
+    dR <- (D*(R_0 - R) + s*H/c - u_m*R*M + l_x*M*x(u_m, R,H))*dt
+    dH <- ( c*g*x(u_m, R, H)*H*M  - (s*H) - ((fun(u_m,R)*C_a) + C_c)*M*H)*dt #host can't exist without already being in the system!
+    dM <- (v*(1-(u_m*z))*(C_c + (fun(u_m,R)*C_a))*H*M - l*M)*dt
+  
+    
+    H.simu1[k] <- H + dH
+    M.simu1[k] <- M + dM
+    R.simu1[k] <- R + dR
+    
+}
+Hset[i] <- H.simu1[length(tset)]
+
+}
+
+plot(uset, Hset, type='l', lwd=2, xlab = "Uptake Rate, u_m", ylab = "Host Abundance at equilibrium, H*", col = 'green')
+```
+
+# Now I have H*, R*, and M* for each of the 20 u_m values!
+# Next step is to calculate each element within our dH/dt equation, the host growth term, the senescence term, and the fungal payments term.
+$$
+\begin{align}
+\frac{dH}{dt} &= cgH \cdot \frac{u_mRM}{l_x + gH} - s H - ( f_m C_a + C_c ) M H \\ 
+\newline
+\end{align}
+
+$$
+# For the Host Growth term.
+# ps. Initial values for each term was calculated by hand.
+```{r}
+Gset <- NaN*Hset #this is where I'm about to hold my values. Basically it's 20 slots of NaNs. 
+tset1 <- seq(0, 19/20, by = 1/20)
+G.simu1 <- NaN*Hset; G.simu1[1] <- 0 # Outer loop: Initial value for G is 0 (Because when u_m is zero the growth term is zero!) Also 20 slots of NaNs.
+for(i in 1:length(uset)){ # for every item in uset for the entire length of uset.
+ u_m <- as.numeric(uset[i]) # set the value for u_m within the equation as every numerical number present in uset (?). Numbers range from 0 to 19/20 by 1/20.
+    
+ for(j in 2:length(tset1)){ #Inner Loop loops through time, use previously generated R* H* and M* values in this double loop, to generate values at each u_m for our growth term!
+      R <- Rset[j]
+      H <- Hset[j]
+      M <- Mset[j]
+      dt <- tset1[j] - tset1[j-1]
+
+  
+      dG <- (c*g*x(u_m, R, H)*H*M)*dt # Just looking at the change in our growth term for now!
+  
+      G.simu1[j] <- dG
+
+ }
+ Gset <- G.simu1
+}
+
+head(G.simu1) ; tail(G.simu1); Gset # Check values recorded in Gset
+
+```
+
+#Okay the math for our growth term didn't quite checkout(R's values v.s. my calculator's), double check calculator cuz senescence seems fine!
+#Let's move on to our senescence term to see if that'll work
+```{r}
+Sset <- NaN*Hset
+tset1 <- seq(0,19/20, by = 1/20)
+S.simu1 <- NaN*Hset; S.simu1[1] <- 2.411478*0.05
+for(i in 1:length(uset)){
+  u_m <- as.numeric(uset[i]) #For every numerical number within uset, put it as u_m at each timestep.
+  
+  for(j in 2:length(tset1)){
+    R <- Rset[j]
+    H <- Hset[j]
+    M <- Mset[j]
+    dt <- tset1[j] - tset1[j-1]
+  
+      dS <- (s*H)*dt # looking at our senescence term only.
+  
+      S.simu1[j] <- dS
+
+ }
+ Sset <- S.simu1
+}
+
+head(Sset) ; tail(Sset)
+```
+
+#Cool the code for senescence checks out! Edit Growth term to match :) 
+# A match and the outcome was the same as our previous code. Hmm. Maybe it IS my math!
+# Next lets generate and save our Host to fungal payments term.
+```{r}
+Pset <- NaN*Hset
+tset1 <- seq(0,19/20, by = 1/20)
+P.simu1 <- NaN*Hset; P.simu1[1] <- 0
+for(i in 1:length(uset)){
+  u_m <- as.numeric(uset[i]) #For every numerical number within uset, put it as u_m at each timestep.
+  
+  for(j in 2:length(tset1)){
+    R <- Rset[j]
+    H <- Hset[j]
+    M <- Mset[j]
+    dt <- tset1[j] - tset1[j-1]
+  
+      dS <- ((fun(u_m,R)*C_a) + C_c)*M*H*dt
+  
+      P.simu1[j] <- dS 
+
+ }
+ Pset <- P.simu1
+}
+
+head(Pset) ; tail(Pset) ; Pset
+```
+
+# Lets plot their respective bifurcation diagrams then!
+# For our Host Growth term
+```{r}
+plot(uset, Gset, type='l', lwd=2, xlab = "Uptake Rate, u_m", ylab = "Host Growth term at equilibrium, G*")
+```
+
+# For Host to fungal payments
+```{r}
+plot(uset, Pset, type='l', lwd = 2, xlab  = "Uptake Rate, u_m", ylab = "Host to Fungal payments term at equilibrium, P*")
+```
+
+# For Senescence.
+```{r}
+plot(uset, Sset, type='l', lwd = 2, xlab  = "Uptake Rate, u_m", ylab = "Senescence term at equilibrium, S*")
+```
+
+# Yay! You've generated graphs! *Congrats*
