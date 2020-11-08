@@ -1,0 +1,338 @@
+---
+title: "Minipip_4.0"
+author: "Natalie Chong"
+date: "8/19/2020"
+output: html_document
+---
+
+#Parameters setting.
+```{r}
+D <- 0.5 # Dilution Rate (Outflow)
+R_0 <- 25 # Inflow Concentration (Nitrogen)
+l <- 0.05 # fungal mortality
+s <- 0.05 # senescence coefficient
+c <- 0.7 # host's C:N Ratio what will changing you do.. what is the ACTUAL C:N ratio?
+z <- 0.3 #cost of being a mutualist per unit of uptake rate* 
+C_a <- 0.3 #Allocation Carbon
+C_c <- 0.2 #Construction Carbon 
+v <- 0.1  #Conversion efficiency, Host carbon to more symbionts
+a <- 1.747721 # Resource's half-saturation constant.**This is k in equation!**
+l_x <- 0.2; l_y <- 0.2  # loss back to R pool per unit of nutrient, let resident and mutant to have the same loss
+
+g <- 0.8 #Tree's per capita groth rate
+
+
+
+fun <- function(u_m,R){(((u_m)*R)/((a)+R))}
+x <- function(u_m, R, H){(u_m*R)/(l_x + g*H)}
+
+```
+
+#Create PIP - Zoomed into 0.8-0.95
+```{r}
+mutset4.7 <- matrix(NaN,nrow = 16, ncol = 16, dimnames = list(seq(0.8, 0.95 , 1/100), seq(0.8, 0.95, 1/100))) 
+dt <- 0.01
+
+for(i in 1:nrow(mutset4.7)){ 
+u_m <-  as.numeric(rownames(mutset4.7)[i]) 
+   
+#Setting initial conditions (letting ecological dynamics play out)   
+tset <- seq(from=0, to= 200, length.out = 10000)
+H.simu1 <- NaN*tset; H.simu1[1] <- 1
+M.simu1 <- NaN*tset; M.simu1[1] <- 1
+R.simu1 <- NaN*tset; R.simu1[1] <- 10
+
+
+for(k in 2:length(tset)){
+    dt <- tset[k] - tset[k-1] 
+    H <- H.simu1[k-1] 
+    M <- M.simu1[k-1]
+    R <- R.simu1[k-1]
+  
+    
+    dR <- (D*(R_0 - R) + s*H/c - u_m*R*M + l_x*M*x(u_m, R,H))*dt
+    dH <- (c*g*x(u_m, R, H)*H*M  - (s*H) - ((fun(u_m,R)*C_a) + C_c)*M*H  )*dt #host can't exist without already being in the system!
+    dM <- (v*(1-(u_m*z))*(C_c + (fun(u_m,R)*C_a))*H*M - l*M)*dt
+  
+    H.simu1[k] <- H + dH
+    M.simu1[k] <- M + dM
+    R.simu1[k] <- R + dR
+    
+}
+# Save end values(@equilibrium) to holding vector.
+H0 <- H.simu1[length(tset)]
+R0 <- R.simu1[length(tset)]
+M_i <- M.simu1[length(tset)]
+
+ H <- H0
+ M <- M_i
+ R <- R0
+
+ dt <- 0.01
+    
+ for(j in 1: ncol(mutset4.7)){
+    u_n <- as.numeric(colnames(mutset4.7)[j]) 
+   
+  delta <- 0.99
+  numberofreps <- 0 
+
+  # insert 1% of mutant population into the system
+  N <- .01*M_i 
+  M <- .99*M_i
+  H <- H0
+  R <- R0
+ 
+  
+  while(numberofreps < 1000000  && (delta < 0.995 && delta > 0.005)){
+    numberofreps <- numberofreps + 1; 
+    
+     dR <- (D*(R_0 - R) + s*H/c - u_m*R*M + l_x*M*x(u_m, R, H) - u_n*R*N + l_y*N*x(u_n, R, H))*dt
+    dH <- (c*g*x(u_m, R, H)*H*M + c*g*x(u_n, R, H)*H*N - (s*H) - ((fun(u_m,R)*C_a) + C_c)*M*H - ((fun(u_n,R)*C_a) + C_c)*N*H)*dt #host can't exist without already being in the system!
+    dM <- (v*(1-(u_m*z))*(C_c + (fun(u_m,R)*C_a))*H*M - l*M)*dt
+    dN <- (v*(1-(u_n*z))*(C_c + (fun(u_n,R)*C_a))*H*N - l*N)*dt
+    
+    H <- H + dH
+    M <- M + dM
+    N<- N + dN
+    R<- R + dR
+    delta <- N / (N+M)
+    if(is.na(delta)){print("delta is not a number"); print(N); print (M)}
+if(is.na(numberofreps)){print("#ofreps is not a number")} 
+  }
+  
+   mutset4.7[[i,j]] <- delta  
+   
+   
+   if (delta >= 0.995){  mutset4.7[[i,j]] <- 1  }
+   if(delta <= 0.005){mutset4.7[[i,j]] <- 0  }
+   } 
+ 
+}
+ 
+  print(round(mutset4.7, 3))
+  
+   library('plot.matrix')
+  Mutant_percentage<-mutset4.7
+ par(mar = c(4,4,4,4))
+  plot(Mutant_percentage, border= NA, fmt.cell='%.3f', fmt.key ="%.2f", breaks = c(-0.1,0.011,.99,1),xlab= "Mutant Uptake Rate, u_n", ylab = "Resident Uptake Rate, u_m", col = c('white','grey','black') ) 
+```
+
+
+```{r}
+D <- 0.5 # Dilution Rate (Outflow)
+R_0 <- 25 # Inflow Concentration (Nitrogen)
+l <- 0.05 # fungal mortality
+s <- 0.05 # senescence coefficient
+c <- 0.7 # host's C:N Ratio what will changing you do.. what is the ACTUAL C:N ratio?
+z <- 0.3 #cost of being a mutualist per unit of uptake rate* 
+C_a <- 0.3 #Allocation Carbon
+C_c <- 0.2 #Construction Carbon 
+v <- 0.1  #Conversion efficiency, Host carbon to more symbionts
+a <- 1.747721 # Resource's half-saturation constant.**This is k in equation!**
+l_x <- 0.2; l_y <- 0.2  # loss back to R pool per unit of nutrient, let resident and mutant to have the same loss
+
+g <- 0.8 #Tree's per capita groth rate
+
+
+
+fun <- function(u_m,R){(((u_m)*R)/((a)+R))}
+x <- function(u_m, R, H){(u_m*R)/(l_x + g*H)}
+
+```
+
+```{r}
+mutset4.8 <- matrix(NaN,nrow = 16, ncol = 16, dimnames = list(seq(0.8, 0.95 , 1/100), seq(0.8, 0.95, 1/100))) 
+dt <- 0.01
+
+for(i in 1:nrow(mutset4.8)){ 
+u_m <-  as.numeric(rownames(mutset4.8)[i]) 
+   
+#Setting initial conditions (letting ecological dynamics play out)   
+tset <- seq(from=0, to= 200, length.out = 10000)
+H.simu1 <- NaN*tset; H.simu1[1] <- 1
+M.simu1 <- NaN*tset; M.simu1[1] <- 1
+R.simu1 <- NaN*tset; R.simu1[1] <- 10
+
+
+for(k in 2:length(tset)){
+    dt <- tset[k] - tset[k-1] 
+    H <- H.simu1[k-1] 
+    M <- M.simu1[k-1]
+    R <- R.simu1[k-1]
+  
+    
+    dR <- (D*(R_0 - R) + s*H/c - u_m*R*M + l_x*M*x(u_m, R,H))*dt
+    dH <- (c*g*x(u_m, R, H)*H*M  - (s*H) - ((fun(u_m,R)*C_a) + C_c)*M*H  )*dt #host can't exist without already being in the system!
+    dM <- (v*(1-(u_m*z))*(C_c + (fun(u_m,R)*C_a))*H*M - l*M)*dt
+  
+    H.simu1[k] <- H + dH
+    M.simu1[k] <- M + dM
+    R.simu1[k] <- R + dR
+    
+}
+# Save end values(@equilibrium) to holding vector.
+H0 <- H.simu1[length(tset)]
+R0 <- R.simu1[length(tset)]
+M_i <- M.simu1[length(tset)]
+
+ H <- H0
+ M <- M_i
+ R <- R0
+
+ dt <- 0.01
+    
+ for(j in 1: ncol(mutset4.8)){
+    u_n <- as.numeric(colnames(mutset4.8)[j]) 
+   
+  delta <- 0.99
+  numberofreps <- 0 
+
+  # insert 1% of mutant population into the system
+  N <- .01*M_i 
+  M <- .99*M_i
+  H <- H0
+  R <- R0
+ 
+  
+  while(numberofreps < 1000000  && (delta < 0.995 && delta > 0.005)){
+    numberofreps <- numberofreps + 1; 
+    
+     dR <- (D*(R_0 - R) + s*H/c - u_m*R*M + l_x*M*x(u_m, R, H) - u_n*R*N + l_y*N*x(u_n, R, H))*dt
+    dH <- (c*g*x(u_m, R, H)*H*M + c*g*x(u_n, R, H)*H*N - (s*H) - ((fun(u_m,R)*C_a) + C_c)*M*H - ((fun(u_n,R)*C_a) + C_c)*N*H)*dt #host can't exist without already being in the system!
+    dM <- (v*(1-(u_m*z))*(C_c + (fun(u_m,R)*C_a))*H*M - l*M)*dt
+    dN <- (v*(1-(u_n*z))*(C_c + (fun(u_n,R)*C_a))*H*N - l*N)*dt
+    
+    H <- H + dH
+    M <- M + dM
+    N<- N + dN
+    R<- R + dR
+    delta <- N / (N+M)
+    if(is.na(delta)){print("delta is not a number"); print(N); print (M)}
+if(is.na(numberofreps)){print("#ofreps is not a number")} 
+  }
+  
+   mutset4.8[[i,j]] <- H  
+   
+   
+   
+   } 
+ 
+}
+ 
+  print(round(mutset4.8, 3))
+  
+   library('plot.matrix')
+  Host_abundance<-mutset4.8
+ par(mar = c(4,4,4,4))
+  plot(Host_abundance, border= NA, fmt.cell='%.3f', fmt.key ="%.2f", breaks = c(-0.1,0.011,.99,1),xlab= "Mutant Uptake Rate, u_n", ylab = "Resident Uptake Rate, u_m", col = c('white','grey','black') ) 
+```
+
+```{r}
+D <- 0.5 # Dilution Rate (Outflow)
+R_0 <- 25 # Inflow Concentration (Nitrogen)
+l <- 0.05 # fungal mortality
+s <- 0.05 # senescence coefficient
+c <- 0.7 # host's C:N Ratio what will changing you do.. what is the ACTUAL C:N ratio?
+z <- 0.3 #cost of being a mutualist per unit of uptake rate* 
+C_a <- 0.3 #Allocation Carbon
+C_c <- 0.2 #Construction Carbon 
+v <- 0.1  #Conversion efficiency, Host carbon to more symbionts
+a <- 1.747721 # Resource's half-saturation constant.**This is k in equation!**
+l_x <- 0.2; l_y <- 0.2  # loss back to R pool per unit of nutrient, let resident and mutant to have the same loss
+
+g <- 0.8 #Tree's per capita groth rate
+
+
+
+fun <- function(u_m,R){(((u_m)*R)/((a)+R))}
+x <- function(u_m, R, H){(u_m*R)/(l_x + g*H)}
+
+```
+
+```{r}
+mutset4.9 <- matrix(NaN,nrow = 16, ncol = 16, dimnames = list(seq(0.8, 0.95 , 1/100), seq(0.8, 0.95, 1/100))) 
+dt <- 0.01
+
+for(i in 1:nrow(mutset4.9)){ 
+u_m <-  as.numeric(rownames(mutset4.9)[i]) 
+   
+#Setting initial conditions (letting ecological dynamics play out)   
+tset <- seq(from=0, to= 200, length.out = 10000)
+H.simu1 <- NaN*tset; H.simu1[1] <- 1
+M.simu1 <- NaN*tset; M.simu1[1] <- 1
+R.simu1 <- NaN*tset; R.simu1[1] <- 10
+
+
+for(k in 2:length(tset)){
+    dt <- tset[k] - tset[k-1] 
+    H <- H.simu1[k-1] 
+    M <- M.simu1[k-1]
+    R <- R.simu1[k-1]
+  
+    
+    dR <- (D*(R_0 - R) + s*H/c - u_m*R*M + l_x*M*x(u_m, R,H))*dt
+    dH <- (c*g*x(u_m, R, H)*H*M  - (s*H) - ((fun(u_m,R)*C_a) + C_c)*M*H  )*dt #host can't exist without already being in the system!
+    dM <- (v*(1-(u_m*z))*(C_c + (fun(u_m,R)*C_a))*H*M - l*M)*dt
+  
+    H.simu1[k] <- H + dH
+    M.simu1[k] <- M + dM
+    R.simu1[k] <- R + dR
+    
+}
+# Save end values(@equilibrium) to holding vector.
+H0 <- H.simu1[length(tset)]
+R0 <- R.simu1[length(tset)]
+M_i <- M.simu1[length(tset)]
+
+ H <- H0
+ M <- M_i
+ R <- R0
+
+ dt <- 0.01
+    
+ for(j in 1: ncol(mutset4.9)){
+    u_n <- as.numeric(colnames(mutset4.9)[j]) 
+   
+  delta <- 0.99
+  numberofreps <- 0 
+
+  # insert 1% of mutant population into the system
+  N <- .01*M_i 
+  M <- .99*M_i
+  H <- H0
+  R <- R0
+ 
+  
+  while(numberofreps < 1000000  && (delta < 0.995 && delta > 0.005)){
+    numberofreps <- numberofreps + 1; 
+    
+     dR <- (D*(R_0 - R) + s*H/c - u_m*R*M + l_x*M*x(u_m, R, H) - u_n*R*N + l_y*N*x(u_n, R, H))*dt
+    dH <- (c*g*x(u_m, R, H)*H*M + c*g*x(u_n, R, H)*H*N - (s*H) - ((fun(u_m,R)*C_a) + C_c)*M*H - ((fun(u_n,R)*C_a) + C_c)*N*H)*dt #host can't exist without already being in the system!
+    dM <- (v*(1-(u_m*z))*(C_c + (fun(u_m,R)*C_a))*H*M - l*M)*dt
+    dN <- (v*(1-(u_n*z))*(C_c + (fun(u_n,R)*C_a))*H*N - l*N)*dt
+    
+    H <- H + dH
+    M <- M + dM
+    N<- N + dN
+    R<- R + dR
+    delta <- N / (N+M)
+    if(is.na(delta)){print("delta is not a number"); print(N); print (M)}
+if(is.na(numberofreps)){print("#ofreps is not a number")} 
+  }
+  
+   mutset4.9[[i,j]] <- M  
+   
+   
+   if (delta >= 0.995){  mutset4.9[[i,j]] <- 1  }
+   if(delta <= 0.005){mutset4.9[[i,j]] <- 0  }
+   } 
+ 
+}
+ 
+  print(round(mutset4.9, 3))
+  
+   library('plot.matrix')
+  Mutant_abundance<-mutset4.9
+ par(mar = c(4,4,4,4))
+  plot(Mutant_abundance, border= NA, fmt.cell='%.3f', fmt.key ="%.2f", breaks = c(-0.1,0.011,.99,1),xlab= "Mutant Uptake Rate, u_n", ylab = "Resident Uptake Rate, u_m", col = c('white','grey','black') ) 
+```
