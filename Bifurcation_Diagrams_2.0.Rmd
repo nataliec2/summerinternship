@@ -151,20 +151,19 @@ G.simu1 <- NaN*Hset; G.simu1[1] <- 0 # Outer loop: Initial value for G is 0 (Bec
 for(i in 1:length(uset)){ # for every item in uset for the entire length of uset.
  u_m <- as.numeric(uset[i]) # set the value for u_m within the equation as every numerical number present in uset (?). Numbers range from 0 to 19/20 by 1/20.
     
- for(j in 2:length(tset1)){ #Inner Loop loops through time, use previously generated R* H* and M* values in this double loop, to generate values at each u_m for our growth term!
-      R <- Rset[j]
-      H <- Hset[j]
-      M <- Mset[j]
-      dt <- tset1[j] - tset1[j-1]
+      R <- Rset[i]
+      H <- Hset[i]
+      M <- Mset[i]
+      
 
   
-      dG <- (c*g*x(u_m, R, H)*H*M)*dt # Just looking at the change in our growth term for now!
+      dG <- (c*g*x(u_m, R, H)*H*M) # Just looking at the change in our growth term for now!
   
-      G.simu1[j] <- dG
+      G.simu1[i] <- dG
 
  }
  Gset <- G.simu1
-}
+
 
 head(G.simu1) ; tail(G.simu1); Gset # Check values recorded in Gset
 
@@ -176,22 +175,19 @@ head(G.simu1) ; tail(G.simu1); Gset # Check values recorded in Gset
 Sset <- NaN*Hset
 tset1 <- seq(0,19/20, by = 1/20)
 S.simu1 <- NaN*Hset; S.simu1[1] <- 2.411478*0.05
+
 for(i in 1:length(uset)){
   u_m <- as.numeric(uset[i]) #For every numerical number within uset, put it as u_m at each timestep.
+    R <- Rset[i]
+    H <- Hset[i]
+    M <- Mset[i]
   
-  for(j in 2:length(tset1)){
-    R <- Rset[j]
-    H <- Hset[j]
-    M <- Mset[j]
-    dt <- tset1[j] - tset1[j-1]
+      dS <- (s*H) # looking at our senescence term only.
   
-      dS <- (s*H)*dt # looking at our senescence term only.
-  
-      S.simu1[j] <- dS
+      S.simu1[i] <- dS
 
  }
  Sset <- S.simu1
-}
 
 head(Sset) ; tail(Sset)
 ```
@@ -201,24 +197,21 @@ head(Sset) ; tail(Sset)
 # Next lets generate and save our Host to fungal payments term.
 ```{r}
 Pset <- NaN*Hset
-tset1 <- seq(0,19/20, by = 1/20)
 P.simu1 <- NaN*Hset; P.simu1[1] <- 0
 for(i in 1:length(uset)){
   u_m <- as.numeric(uset[i]) #For every numerical number within uset, put it as u_m at each timestep.
+    R <- Rset[i]
+    H <- Hset[i]
+    M <- Mset[i]
+    
   
-  for(j in 2:length(tset1)){
-    R <- Rset[j]
-    H <- Hset[j]
-    M <- Mset[j]
-    dt <- tset1[j] - tset1[j-1]
+      dP <- ((fun(u_m,R)*C_a) + C_c)*M*H
   
-      dS <- ((fun(u_m,R)*C_a) + C_c)*M*H*dt
-  
-      P.simu1[j] <- dS 
+      P.simu1[i] <- dP
 
  }
  Pset <- P.simu1
-}
+
 
 head(Pset) ; tail(Pset) ; Pset
 ```
@@ -240,3 +233,40 @@ plot(uset, Sset, type='l', lwd = 2, xlab  = "Uptake Rate, u_m", ylab = "Senescen
 ```
 
 # Yay! You've generated graphs! *Congrats*
+#Combination
+```{r}
+plot(uset, Gset-Sset-Pset, type='l', lwd = 2, xlab  = "Uptake Rate, u_m", ylim = c(0,5), ylab = "Senescence term at equilibrium, S*") #YOU CAN DO THIS
+lines(uset, Hset, lwd = 2, lty = 2)
+```
+
+# Plotting Fidelity
+```{r}
+fset <- NaN*Hset
+f.simu1 <- NaN*Hset; f.simu1[1] <- 0
+for(i in 1:length(uset)){
+  u_m <- as.numeric(uset[i]) #For every numerical number within uset, put it as u_m at each timestep.
+    R <- Rset[i]
+    H <- Hset[i]
+    M <- Mset[i]
+    
+  
+      df <- fun(u_m,R)
+  
+      f.simu1[i] <- df
+
+ }
+ fset <- f.simu1
+
+
+head(fset) ; tail(fset) ; fset
+plot(uset, fset, type='l', lwd = 2, xlab  = "Uptake Rate, u_m", ylab = "Fidelity*")
+```
+
+```{r}
+(fset*C_a + C_c)*Hset*Mset
+```
+
+```{r}
+(c*g*Hset*uset*Rset*Mset)/(l_x +g*Hset)
+```
+
