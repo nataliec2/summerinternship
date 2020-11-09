@@ -1,0 +1,99 @@
+---
+title: "Hstar_Rstar_Ponder"
+author: "Natalie Chong"
+date: "11/7/2020"
+output: html_document
+---
+# In this markdown, we're going to try to create a bifurcation diagram using the equilibrium point that we'd previously solved for using our dM/dt equation (Section 16.4) in the Overleaf Document.
+```{r}
+D <- 0.5 # Dilution Rate (Outflow)
+R_0 <- 25 # Inflow Concentration (Nitrogen)
+l <- 0.05 # fungal mortality
+s <- 0.05 # senescence coefficient
+#c <- 0.7 # host's C:N Ratio
+z <- 0.3 #cost of being a mutualist per unit of uptake rate* 
+C_a <- 0.3 #Allocation Carbon
+C_c <- 0.2 #Construction Carbon 
+#v <- 0.1  #Conversion efficiency, Host carbon to more symbionts REMOVE ME FROM PREVIOUS MARKDOWNS
+a <- 1.747721 # Resource's half-saturation constant.**This is k in equation!**
+l_x <- 0.2 # loss back to R pool per unit of nutrient, let resident and mutant to have the same loss
+l_y <- 0.2
+g <- 0.8 #Tree's per capita groth rate
+
+fun <- function(u_m,R){(((u_m)*R)/((a)+R))}
+x <- function(u_m, R, H){(u_m*R)/(l_x + g*H)}
+```
+
+$$
+\begin{align}
+ H^* =  \frac{l}{v(1-zu_m)(\frac{u_mR}{k + R}C_a + C_c)} = 0 
+\end{align}
+$$
+
+
+#Recording R* at equilibrium, as Rset
+```{r}
+uset <- seq(1/20, 1, 1/20)
+Rset <- NaN*uset
+for(i in 1:length(uset)){
+  u_m <- as.numeric(uset[i])
+tset <- seq(from=0, to= 300, length.out = 10000)
+H.simu1 <- NaN*tset; H.simu1[1] <- 1
+M.simu1 <- NaN*tset; M.simu1[1] <- 1
+R.simu1 <- NaN*tset; R.simu1[1] <- 10
+for(k in 2:length(tset)){
+    dt <- tset[k] - tset[k-1] 
+    H <- H.simu1[k-1] 
+    M <- M.simu1[k-1]
+    R <- R.simu1[k-1]
+  
+    
+    dR <- (D*(R_0 - R) + s*H/c - u_m*R*M + l_x*M*x(u_m, R,H))*dt
+    dH <- (c*g*x(u_m, R, H)*H*M  - (s*H) - ((fun(u_m,R)*C_a) + C_c)*M*H  )*dt #added H term in the positive portion of the equation, host can't exist without already being in the system!
+    dM <- (v*(1-(u_m*z))*(C_c + (fun(u_m,R)*C_a))*H*M - l*M)*dt
+  
+    
+    H.simu1[k] <- H + dH
+    M.simu1[k] <- M + dM
+    R.simu1[k] <- R + dR
+    
+}
+Rset[i] <- R.simu1[length(tset)]
+}
+```
+
+
+
+# Now let's find out what graph it'll yield in the equilbrium that we solved for! (H* above)
+```{r}
+Hset <- NaN*uset
+for(i in 1:length(uset)){
+  u_m <- as.numeric(uset[i])
+  R <- Rset[i]
+  
+  dHstar <- l/(b*(1 - z*u_m)*(((u_m*R/(k + R))*C_a) + C_c))
+  
+  Hset[i] <- dHstar 
+}
+
+plot(uset, Hset, type='l', lwd=2, ylim= c(.7,1.2), xlab = "Uptake Rate, u_m", ylab = "Host Abundance at equilibrium, H*", col = 'green')
+```
+
+
+# Now lets set up the bifurcation of Rstar v.s. u_m like we did for Hstar!
+# Note that the Rstar recorded here was solved by hand, and simplified by Mathematica.
+# Also note that after algebraic alterations we no longer have any variables in the equations! Make the for loop extra easy to make.
+```{r}
+Rset2 <- NaN*uset
+for(i in 1:length(uset)){
+  u_m <- as.numeric(uset[i])
+  
+  
+  dRstar <- (g^2*l^3*s + (b*l*s*v*(C_c + (C_a*fun(u_m, R)))*(1 - z*u_m)) + (b*g*l^2*s*v*(C_c +(C_a*fun(u_m, R)))*l_x*(1-z*u_m)) + (D*g^2*l*((C_c +(C_a*fun(u_m, R))))*R_0*(1 - z*u_m)) + (b^2*v^2*(C_c +(C_a*fun(u_m, R)))^3*l_x^2*R_0*(1 - z*u_m)^3) + (b^2*l*s*v^2*(C_c +(C_a*fun(u_m, R)))^2*l_x*(-1+z*u_m)^2) + (b*D*v*(C_c +(C_a*fun(u_m, R)))^2*l_x*R_0*(-1 +z*u_m)^2) + (b*D*g*l*v*(C_c +(C_a*fun(u_m, R)))^2*l_x*R_0*(-1 +z*u_m)^2))/((-(b^2)*c*g*l*s*v^2*C_a*fun(u_m,R)*l_x*u_m) + (b^2*c*D*g*v^2*(C_c + (C_a*fun(u_m, R)))^2*l_x*R_0*u_m*(1 - z*u_m)^3) - (C_c*(-1 + z*u_m)^2) + (b^2*c*g*l*s*v^2*(C_c +(C_a*fun(u_m, R)))*u_m*(-1 +z*u_m)^2) + (b*c*D*g^2*l*v*(C_c +(C_a*fun(u_m, R)))*l_x*R_0*u_m*(-1 +z*u_m)^2))
+  
+  Rset2[i] <- dRstar 
+}
+
+plot(uset, Rset2, type='l', lwd=2, xlab = "Uptake Rate, u_m", ylab = "Resource Availability at equilibrium, R*", col = 'maroon')
+```
+
