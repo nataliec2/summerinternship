@@ -1,0 +1,126 @@
+---
+title: "Xstar_f_um"
+author: "Natalie Chong"
+date: "11/23/2020"
+output: html_document
+---
+
+#This Markdown's Goal is to look at the relationship between fidelity, f, Our Temporary Resource Pool(Abundance), Xstar, and Resident Uptake Rate, u_m.
+#Xstar is a temporary resource pool (units :amount of resources,(nitrogen, phosphorus, etc)), representing resources that has been transfered to our host, but hadn't been utilized by our host to make more biomass.
+```{r}
+D <- 0.5 # Dilution Rate (Outflow)
+R_0 <- 25 # Inflow Concentration (Nitrogen)
+l <- 0.05 # fungal mortality
+s <- 0.05 # senescence coefficient
+c <- 0.7 # host's C:N Ratio
+z <- 0.3 #cost of being a mutualist per unit of uptake rate* 
+C_a <- 0.3 #Allocation Carbon
+C_c <- 0.2 #Construction Carbon 
+v <- 0.1  #Conversion efficiency, Host carbon to more symbionts
+a <- 1.872335 # Resource's half-saturation constant.**This is k in equation!**
+l_x <- 0.2 # loss back to R pool per unit of nutrient, let resident and mutant to have the same loss
+l_y <- 0.2
+g <- 0.8 #Tree's per capita growth rate
+
+fun2 <- function(u_m,R){(((u_m)*((u_m*R)/(l_x + g*H)))/((a)+((u_m*R)/(l_x + g*H))))} #This is the function for fidelity, where 
+x <- function(u_m, R, H){(u_m*R)/(l_x + g*H)}
+```
+
+
+
+# Code below records Xstar.
+```{r}
+uset <- seq(0, 1, 1/1000)
+mutset5.2 <- NaN*uset
+
+
+for(j in 1: length(mutset5.2)){
+    u_m <- as.numeric(uset[j])
+ 
+tset <- seq(from=0, to= 100, length.out = 1000)
+H.simu1 <- NaN*tset; H.simu1[1] <- 1
+M.simu1 <- NaN*tset; M.simu1[1] <- 1
+R.simu1 <- NaN*tset; R.simu1[1] <- 10
+
+for(k in 2:length(tset)){
+    dt <- tset[k] - tset[k-1] 
+    H <- H.simu1[k-1] 
+    M <- M.simu1[k-1]
+    R <- R.simu1[k-1]
+  
+    
+    dR <- (D*(R_0 - R) + s*H/c - u_m*R*M + l_x*M*x(u_m, R,H))*dt
+    dH <- (c*g*x(u_m, R, H)*M*H  - (s*H) - ((fun2(u_m,R)*C_a) + C_c)*M*H  )*dt #added H term in the positive portion of the equation, host can't exist without already being in the system!
+    dM <- (v*(1-(u_m*z))*(C_c + (fun2(u_m,R)*C_a))*H*M - l*M)*dt
+  
+    
+    H.simu1[k] <- H + dH
+    M.simu1[k] <- M + dM
+    R.simu1[k] <- R + dR
+    
+      x_temp <- x(u_m, R, H)
+      
+      
+}
+   mutset5.2[j] <- x_temp
+ 
+}
+   
+plot(uset, mutset5.2, lwd = 2, type ="l", xlab = "Resident Uptake, u_m", ylab = "Temporary Resource Pool, X*", col =Rcol) # Plots Xstar as a function of uptake rate.
+
+uset[501]
+mutset5.2[501]
+```
+
+# parameter a should've been 0.4953479.
+
+# Code below records fidelity.
+```{r}
+uset <- seq(0, 1, 1/1000)
+mutset5.3 <- NaN*uset
+
+
+for(j in 1: length(mutset5.3)){
+    u_m <- as.numeric(uset[j])
+ 
+tset <- seq(from=0, to= 100, length.out = 1000)
+H.simu1 <- NaN*tset; H.simu1[1] <- 1
+M.simu1 <- NaN*tset; M.simu1[1] <- 1
+R.simu1 <- NaN*tset; R.simu1[1] <- 10
+
+for(k in 2:length(tset)){
+    dt <- tset[k] - tset[k-1] 
+    H <- H.simu1[k-1] 
+    M <- M.simu1[k-1]
+    R <- R.simu1[k-1]
+  
+    
+    dR <- (D*(R_0 - R) + s*H/c - u_m*R*M + l_x*M*x(u_m, R,H))*dt
+    dH <- (c*g*x(u_m, R, H)*M*H  - (s*H) - ((fun2(u_m,R)*C_a) + C_c)*M*H  )*dt #added H term in the positive portion of the equation, host can't exist without already being in the system!
+    dM <- (v*(1-(u_m*z))*(C_c + (fun2(u_m,R)*C_a))*H*M - l*M)*dt
+  
+    
+    H.simu1[k] <- H + dH
+    M.simu1[k] <- M + dM
+    R.simu1[k] <- R + dR
+    
+      fid <- fun2(u_m,R)
+      
+      
+}
+   mutset5.3[j] <- fid
+ 
+
+}
+
+plot(uset, mutset5.3, lwd = 2, type ="l", xlab = "Resident Uptake, u_m", ylab = "Host Fidelity, f", col = Hcol) # Plots fidelity as a function of uptake rate.
+```
+
+
+# Plotting Fidelity v.s. Xstar
+```{r}
+plot(x= mutset5.2, y= mutset5.3, xlab = 'Temporary Resource Pool, X*', ylab = 'Host fidelity, f', lwd=2)
+```
+
+
+
