@@ -1,0 +1,522 @@
+---
+title: "Satfunc5.0_fid3.3"
+author: "Natalie Chong"
+date: "12/12/2020"
+output: html_document
+---
+
+##### This is a more organized version of Satfunc5.0_fid3. After talking to Alexandra I realized that we no-longer HAD a k in our equations(I know, I can't believe I did it for nothing, oh well this is a good time to say let bygones be bygones)! Since fidelity was just our short-term resource pool, scaled by constant b (yet to define!) There are a total of 10 b-values that we're going to test out.
+
+### First and foremost, our parameter values have to be set to something.
+```{r}
+#b I have yet to define you.
+#a <- 1.872335 # Resource's half-saturation constant.**This is k in equation!**
+D <- 0.5 # Dilution Rate (Outflow)
+R_0 <- 25 # Inflow Concentration (Nitrogen)
+l <- 0.05 # fungal mortality
+s <- 0.05 # senescence coefficient
+c <- 0.7 # host's C:N Ratio
+z <- 0.3 #cost of being a mutualist per unit of uptake rate* 
+C_a <- 0.3 #Allocation Carbon
+C_c <- 0.2 #Construction Carbon 
+v <- 0.1  #Conversion efficiency, Host carbon to more symbionts
+l_x <- 0.2 # loss back to R pool per unit of nutrient, let resident and mutant to have the same loss
+l_y <- 0.2
+g <- 0.8 #Tree's per capita growth rate
+uset <- seq(0, 1, 1/1000)
+uset2 <- seq(0, 1, 1/100)
+```
+
+### Fidelity function.
+```{r}
+fun4 <- function(b,u_m,R,H){b*(u_m*R)/(l_x + g*H)} # Fidelity is Xstar multiplied by a scaling 
+```
+
+### Temporary resource pool function.
+```{r}
+x <- function(u_m, R, H){(u_m*R)/(l_x + g*H)}
+```
+
+### PIP function.
+```{r}
+pip <- function(b, step) {myseq <- seq(0, 1, step) # Makes pip a function! variables within it are listed to be b and step. stuff after open-currly brace names a new function myseq, and defines as a value that ranges from 0 to 1, by "step".
+mutset5.1 <- matrix(NaN, nrow=length(myseq), ncol=length(myseq),dimnames=list(myseq, myseq)) # cool matrix function. STUDY THIS! note that myseq was stolen from some other anotation and might make some scientists mildly mad.
+dt <- 0.01 # defined time steps as 1/100 each step.
+
+for(i in 1:nrow(mutset5.1)){ #mutset5.1: records every individual who won. nrow here is analogous to "length" command in regular for loops.
+u_m <-  as.numeric(rownames(mutset5.1)[i]) # at each row, place the corresponding numeric u_m value into the "u_m" notation in our equations.
+   
+#**    
+tset <- seq(from=0, to= 500, length.out = 5*10000/3) # length.out here is a little trick that enables us to increase our total time steps but not let everything to go outta whack.
+H.simu1 <- NaN*tset; H.simu1[1] <- 1 # create our holding vector, full of NaNs with the initial value of 1. Multiplied by tset because we want it to be the same length
+M.simu1 <- NaN*tset; M.simu1[1] <- 1
+R.simu1 <- NaN*tset; R.simu1[1] <- 10
+
+for(k in 2:length(tset)){ # runs inner loop that runs ecological dynamics. 
+    dt <- tset[k] - tset[k-1] # each time we do tset would be the later tset value minus the previous time step.
+    H <- H.simu1[k-1] 
+    M <- M.simu1[k-1]
+    R <- R.simu1[k-1]
+    
+    dR <- (D*(R_0 - R) + s*H/c - u_m*R*M + l_x*M*x(u_m, R,H))*dt
+    dH <- (c*g*x(u_m, R, H)*H*M  - (s*H) - ((fun4(b,u_m,R,H)*C_a) + C_c)*M*H  )*dt #host can't exist without already being in the system, why we needed an H in our typically positive term!
+    dM <- (v*(1-(u_m*z))*(C_c + (fun4(b,u_m,R,H)*C_a))*H*M - l*M)*dt
+    H.simu1[k] <- H + dH
+    M.simu1[k] <- M + dM
+    R.simu1[k] <- R + dR
+    
+} 
+# run this intial condition loop in a seperate markdown to make sure that everything has equilibrated.
+H0 <- H.simu1[length(tset)] # Save where our has equilibrated in our a new holding vector, to initiate dynamics when mutants are present.
+R0 <- R.simu1[length(tset)]
+M_i <- M.simu1[length(tset)]
+
+#Store Resident equilibrium values.
+ H <- H0
+ R <- R0
+ M <- M_i
+ dt <- 0.01
+
+# For every value of u_n.
+ for(j in 1: ncol(mutset5.1)){
+    u_n <- as.numeric(colnames(mutset5.1)[j])
+ 
+  numberofreps <- 0 
+  H <- H0
+  R <- R0
+  N <- .01*M_i
+  M <- .99*M_i
+  
+ 
+  
+    N.N <- (v*(1-(u_n*z))*(C_c + (fun4(b,u_n,R,H)*C_a))*H - l)*dt # N.N would be our invasion fitness. It is basically our change in mutant abundance (dN) with changing time (dt), divided by how many mutants there are in the population.
+    
+    
+ mutset5.1[[i,j]] <- N.N # save the value of N.N into our matrix, at each corresponding column/row.
+   
+
+    if(i == j){N.N <- 0} #We added this. Maybe considered cheating, this line makes the diagonal zero regardless of what our simulation says.
+    if(N.N > 0){mutset5.1[[i,j]] <- TRUE} 
+    if(N.N <= 0){mutset5.1[[i,j]] <- FALSE}
+
+ }
+}
+
+ return(mutset5.1) # remember to include this return command so that R knows what to print when you call this function!
+}
+```
+
+### Host, Resident symbiont, and resource bifurcation diagram function.
+```{r}
+host_uptake <- function(b,u_m, R, H, M){uset2 <- seq(0, 1, 1/100) #decrease last input to make graph smooth
+Hset <- NaN*uset2
+Rset <- NaN*uset2
+Mset <- NaN*uset2
+
+for(i in 1:length(uset2)){
+  u_m <- as.numeric(uset2[i])
+tset <- seq(from=0, to= 500, length.out = 5/3*10000) # make sure that the two tsets are the same. (bifurcation here, and pip's below)
+H.simu1 <- NaN*tset; H.simu1[1] <- 1
+M.simu1 <- NaN*tset; M.simu1[1] <- 1
+R.simu1 <- NaN*tset; R.simu1[1] <- 10
+
+for(k in 2:length(tset)){
+    dt <- tset[k] - tset[k-1] 
+    H <- H.simu1[k-1] 
+    M <- M.simu1[k-1]
+    R <- R.simu1[k-1]
+  
+    
+    dR <- (D*(R_0 - R) + s*H/c - u_m*R*M + l_x*M*x(u_m, R,H))*dt
+    dH <- (c*g*x(u_m, R, H)*M*H  - (s*H) - ((fun4(b,u_m,R,H)*C_a) + C_c)*M*H  )*dt #added H term in the positive portion of the equation, host can't exist without already being in the system!
+    dM <- (v*(1-(u_m*z))*(C_c + (fun4(b,u_m,R,H)*C_a))*H*M - l*M)*dt
+  
+    
+    H.simu1[k] <- H + dH
+    M.simu1[k] <- M + dM
+    R.simu1[k] <- R + dR
+    
+    }
+Hset[i] <- H.simu1[length(tset)]
+Mset[i] <- M.simu1[length(tset)]
+Rset[i] <- R.simu1[length(tset)]
+
+}
+return(list(Hset=Hset, Rset = Rset, Mset = Mset)) # !!! remember to include RETURN...
+}
+```
+
+## Setting things up to record/save our ESSs at each b value. 
+```{r}
+pip <- function(b, step) {myseq <- seq(0, 1, step) # Makes pip a function! variables within it are listed to be b and step. stuff after open-currly brace names a new function myseq, and defines as a value that ranges from 0 to 1, by "step".
+mutset5.2 <- matrix(NaN, nrow=length(myseq), ncol=length(myseq),dimnames=list(myseq, myseq)) # cool matrix function. STUDY THIS! note that myseq was stolen from some other anotation and might make some scientists mildly mad.
+dt <- 0.01 # defined time steps as 1/100 each step.
+
+for(i in 1:nrow(mutset5.2)){ #mutset5.2: records every individual who won. nrow here is analogous to "length" command in regular for loops.
+u_m <-  as.numeric(rownames(mutset5.2)[i]) # at each row, place the corresponding numeric u_m value into the "u_m" notation in our equations.
+   
+#**    
+tset <- seq(from=0, to= 500, length.out = 5*10000/3) # length.out here is a little trick that enables us to increase our total time steps but not let everything to go outta whack.
+H.simu1 <- NaN*tset; H.simu1[1] <- 1 # create our holding vector, full of NaNs with the initial value of 1. Multiplied by tset because we want it to be the same length
+M.simu1 <- NaN*tset; M.simu1[1] <- 1
+R.simu1 <- NaN*tset; R.simu1[1] <- 10
+
+for(k in 2:length(tset)){ # runs inner loop that runs ecological dynamics. 
+    dt <- tset[k] - tset[k-1] # each time we do tset would be the later tset value minus the previous time step.
+    H <- H.simu1[k-1] 
+    M <- M.simu1[k-1]
+    R <- R.simu1[k-1]
+    
+    dR <- (D*(R_0 - R) + s*H/c - u_m*R*M + l_x*M*x(u_m, R,H))*dt
+    dH <- (c*g*x(u_m, R, H)*H*M  - (s*H) - ((fun4(b,u_m,R,H)*C_a) + C_c)*M*H  )*dt #host can't exist without already being in the system, why we needed an H in our typically positive term!
+    dM <- (v*(1-(u_m*z))*(C_c + (fun4(b,u_m,R,H)*C_a))*H*M - l*M)*dt
+    H.simu1[k] <- H + dH
+    M.simu1[k] <- M + dM
+    R.simu1[k] <- R + dR
+    
+} 
+# run this intial condition loop in a seperate markdown to make sure that everything has equilibrated.
+H0 <- H.simu1[length(tset)] # Save where our has equilibrated in our a new holding vector, to initiate dynamics when mutants are present.
+R0 <- R.simu1[length(tset)]
+M_i <- M.simu1[length(tset)]
+
+#Store Resident equilibrium values.
+ H <- H0
+ R <- R0
+ M <- M_i
+ dt <- 0.01
+
+# For every value of u_n.
+ for(j in 1: ncol(mutset5.2)){
+    u_n <- as.numeric(colnames(mutset5.2)[j])
+ 
+  numberofreps <- 0 
+  H <- H0
+  R <- R0
+  N <- .01*M_i
+  M <- .99*M_i
+  
+ 
+  
+    N.N <- (v*(1-(u_n*z))*(C_c + (fun4(b,u_n,R,H)*C_a))*H - l)*dt # N.N would be our invasion fitness. It is basically our change in mutant abundance (dN) with changing time (dt), divided by how many mutants there are in the population.
+    
+    
+ mutset5.2[[i,j]] <- N.N # save the value of N.N into our matrix, at each corresponding column/row.
+   
+
+    if(i == j){N.N <- 0} #We added this. Maybe considered cheating, this line makes the diagonal zero regardless of what our simulation says.
+    if(N.N > 0){mutset5.2[[i,j]] <- TRUE} 
+    if(N.N <= 0){mutset5.2[[i,j]] <- FALSE}
+
+ }
+}
+# initialize list of ESSs
+myESSs <- c()
+
+# Go through each row of PIP, looking for ESSs
+for (i in 1:nrow(my_pip)) {
+    # Check to make sure resident is not dead
+    if(my_resident_biomass[[i]] > 0) {
+        if(all(pip[i,] == 1)) {
+            myESSs <- c(myESSs, rownames(pip)[[i]])
+        }
+    }
+}
+
+ return(mutset5.2) # remember to include this return command so that R knows what to print when you call this function!
+}
+```
+
+
+## No. 1 Let's define the value of b first! b = 0.1
+```{r}
+b <- 0.1
+```
+
+### Next, we would be calling the *PIP function* to make our PIP!
+```{r}
+pip_0.1b <- pip(b, 1/40) # this is by 1/40 of a step, which means that there are 41 columns and rows in total. In other words, our values of u_m that ranges from 0 to 1 are sliced up into 41 pieces (because we're also including 0 that's where the extra 1 piece is from.)
+
+library('plot.matrix')
+  par(mar = c(4,4,4,4))
+  plot(pip_0.1b, border= NA, fmt.key ="%.1f", xlab= "Mutant Uptake Rate, u_n", ylab = "Resident Uptake Rate, u_m", col = c('white','black') ) #plotted.
+```
+
+### Four panel plot for when b = 0.1
+```{r}
+b <- 0.1
+Hset2 <- host_uptake(b, u_m, R, H, M)
+uset2 <- seq(0, 1, 1/100)
+
+par(mfrow=c(2,2), mar = c(5,5,1,1)) # mfrow= makes four panel plot, 2 rows and 2 columns. whee; mar = c(bottom, left, top, right ) margin lengths!!
+plot(x = uset2, y = Hset2$Hset, lwd = 2, xlab = "Uptake Rate, u_m", ylab = "Host Abundance at \n equilibrium, H*", col = 'darkgreen') # \n=  new line here.
+plot(x = uset2, y = Hset2$Mset, lwd = 2, xlab = "Uptake Rate, u_m", ylab = "Resident Abundance \n at equilibrium, M*", col = 'skyblue') 
+plot(x = uset2, y = Hset2$Rset, lwd = 2, xlab = "Uptake Rate, u_m", ylab = "Resource Abundance \n at equilibrium, R*", col = 'maroon') 
+par(mar = c(5,5,1,3))
+plot(pip_0.1b, border= NA,  fmt.key ="%.2f", xlab= "Mutant Uptake Rate, u_n", ylab = "Resident Uptake Rate, u_m", col = c('white','black') ) 
+
+```
+
+## No. 2 Let's define the value of b first! b = 0.2
+```{r}
+b <- 0.2
+```
+
+### Next, we would be calling the *PIP function* to make our PIP!
+```{r}
+pip_0.2b <- pip(b, 1/40) # this is by 1/40 of a step, which means that there are 41 columns and rows in total. In other words, our values of u_m that ranges from 0 to 1 are sliced up into 41 pieces (because we're also including 0 that's where the extra 1 piece is from.)
+
+library('plot.matrix')
+  par(mar = c(4,4,4,4))
+  plot(pip_0.2b, border= NA, fmt.key ="%.1f", xlab= "Mutant Uptake Rate, u_n", ylab = "Resident Uptake Rate, u_m", col = c('white','black') ) #plotted.
+```
+
+### Four panel plot for when b = 0.2
+```{r}
+b <- 0.2
+Hset2 <- host_uptake(b, u_m, R, H, M)
+uset2 <- seq(0, 1, 1/100)
+
+par(mfrow=c(2,2), mar = c(5,5,1,1)) # mfrow= makes four panel plot, 2 rows and 2 columns. whee; mar = c(bottom, left, top, right ) margin lengths!!
+plot(x = uset2, y = Hset2$Hset, lwd = 2, xlab = "Uptake Rate, u_m", ylab = "Host Abundance at \n equilibrium, H*", col = 'darkgreen') # \n=  new line here.
+plot(x = uset2, y = Hset2$Mset, lwd = 2, xlab = "Uptake Rate, u_m", ylab = "Resident Abundance \n at equilibrium, M*", col = 'skyblue') 
+plot(x = uset2, y = Hset2$Rset, lwd = 2, xlab = "Uptake Rate, u_m", ylab = "Resource Abundance \n at equilibrium, R*", col = 'maroon') 
+par(mar = c(5,5,1,3))
+plot(pip_0.2b, border= NA,  fmt.key ="%.2f", xlab= "Mutant Uptake Rate, u_n", ylab = "Resident Uptake Rate, u_m", col = c('white','black') ) 
+
+```
+
+## No. 3 Let's define the value of b first! b = 0.3
+```{r}
+b <- 0.3
+```
+
+### Next, we would be calling the *PIP function* to make our PIP!
+```{r}
+pip_0.3b <- pip(b, 1/40) # this is by 1/40 of a step, which means that there are 41 columns and rows in total. In other words, our values of u_m that ranges from 0 to 1 are sliced up into 41 pieces (because we're also including 0 that's where the extra 1 piece is from.)
+
+library('plot.matrix')
+  par(mar = c(4,4,4,4))
+  plot(pip_0.3b, border= NA, fmt.key ="%.1f", xlab= "Mutant Uptake Rate, u_n", ylab = "Resident Uptake Rate, u_m", col = c('white','black') ) #plotted.
+```
+
+### Four panel plot for when b = 0.3
+```{r}
+b <- 0.3
+Hset2 <- host_uptake(b, u_m, R, H, M)
+uset2 <- seq(0, 1, 1/100)
+
+par(mfrow=c(2,2), mar = c(5,5,1,1)) # mfrow= makes four panel plot, 2 rows and 2 columns. whee; mar = c(bottom, left, top, right ) margin lengths!!
+plot(x = uset2, y = Hset2$Hset, lwd = 2, xlab = "Uptake Rate, u_m", ylab = "Host Abundance at \n equilibrium, H*", col = 'darkgreen') # \n=  new line here.
+plot(x = uset2, y = Hset2$Mset, lwd = 2, xlab = "Uptake Rate, u_m", ylab = "Resident Abundance \n at equilibrium, M*", col = 'skyblue') 
+plot(x = uset2, y = Hset2$Rset, lwd = 2, xlab = "Uptake Rate, u_m", ylab = "Resource Abundance \n at equilibrium, R*", col = 'maroon') 
+par(mar = c(5,5,1,3))
+plot(pip_0.3b, border= NA,  fmt.key ="%.2f", xlab= "Mutant Uptake Rate, u_n", ylab = "Resident Uptake Rate, u_m", col = c('white','black') ) 
+
+```
+
+## No. 4 Let's define the value of b first! b = 0.4
+```{r}
+b <- 0.4
+```
+
+### Next, we would be calling the *PIP function* to make our PIP!
+```{r}
+pip_0.4b <- pip(b, 1/40) # this is by 1/40 of a step, which means that there are 41 columns and rows in total. In other words, our values of u_m that ranges from 0 to 1 are sliced up into 41 pieces (because we're also including 0 that's where the extra 1 piece is from.)
+
+library('plot.matrix')
+  par(mar = c(4,4,4,4))
+  plot(pip_0.4b, border= NA, fmt.key ="%.1f", xlab= "Mutant Uptake Rate, u_n", ylab = "Resident Uptake Rate, u_m", col = c('white','black') ) #plotted.
+```
+
+### Four panel plot for when b = 0.4
+```{r}
+b <- 0.4
+Hset2 <- host_uptake(b, u_m, R, H, M)
+uset2 <- seq(0, 1, 1/100)
+
+par(mfrow=c(2,2), mar = c(5,5,1,1)) # mfrow= makes four panel plot, 2 rows and 2 columns. whee; mar = c(bottom, left, top, right ) margin lengths!!
+plot(x = uset2, y = Hset2$Hset, lwd = 2, xlab = "Uptake Rate, u_m", ylab = "Host Abundance at \n equilibrium, H*", col = 'darkgreen') # \n=  new line here.
+plot(x = uset2, y = Hset2$Mset, lwd = 2, xlab = "Uptake Rate, u_m", ylab = "Resident Abundance \n at equilibrium, M*", col = 'skyblue') 
+plot(x = uset2, y = Hset2$Rset, lwd = 2, xlab = "Uptake Rate, u_m", ylab = "Resource Abundance \n at equilibrium, R*", col = 'maroon') 
+par(mar = c(5,5,1,3))
+plot(pip_0.4b, border= NA,  fmt.key ="%.2f", xlab= "Mutant Uptake Rate, u_n", ylab = "Resident Uptake Rate, u_m", col = c('white','black') ) 
+
+```
+
+## No. 5 Let's define the value of b first! b = 0.5
+```{r}
+b <- 0.5
+```
+
+### Next, we would be calling the *PIP function* to make our PIP!
+```{r}
+pip_0.5b <- pip(b, 1/40) # this is by 1/40 of a step, which means that there are 41 columns and rows in total. In other words, our values of u_m that ranges from 0 to 1 are sliced up into 41 pieces (because we're also including 0 that's where the extra 1 piece is from.)
+
+library('plot.matrix')
+  par(mar = c(4,4,4,4))
+  plot(pip_0.5b, border= NA, fmt.key ="%.1f", xlab= "Mutant Uptake Rate, u_n", ylab = "Resident Uptake Rate, u_m", col = c('white','black') ) #plotted.
+```
+
+### Four panel plot for when b = 0.5
+```{r}
+b <- 0.5
+Hset2 <- host_uptake(b, u_m, R, H, M)
+uset2 <- seq(0, 1, 1/100)
+
+par(mfrow=c(2,2), mar = c(5,5,1,1)) # mfrow= makes four panel plot, 2 rows and 2 columns. whee; mar = c(bottom, left, top, right ) margin lengths!!
+plot(x = uset2, y = Hset2$Hset, lwd = 2, xlab = "Uptake Rate, u_m", ylab = "Host Abundance at \n equilibrium, H*", col = 'darkgreen') # \n=  new line here.
+plot(x = uset2, y = Hset2$Mset, lwd = 2, xlab = "Uptake Rate, u_m", ylab = "Resident Abundance \n at equilibrium, M*", col = 'skyblue') 
+plot(x = uset2, y = Hset2$Rset, lwd = 2, xlab = "Uptake Rate, u_m", ylab = "Resource Abundance \n at equilibrium, R*", col = 'maroon') 
+par(mar = c(5,5,1,3))
+plot(pip_0.5b, border= NA,  fmt.key ="%.2f", xlab= "Mutant Uptake Rate, u_n", ylab = "Resident Uptake Rate, u_m", col = c('white','black') ) 
+
+```
+
+## No. 6 Let's define the value of b first! b = 0.6
+```{r}
+b <- 0.6
+```
+
+### Next, we would be calling the *PIP function* to make our PIP!
+```{r}
+pip_0.6b <- pip(b, 1/40) # this is by 1/40 of a step, which means that there are 41 columns and rows in total. In other words, our values of u_m that ranges from 0 to 1 are sliced up into 41 pieces (because we're also including 0 that's where the extra 1 piece is from.)
+
+library('plot.matrix')
+  par(mar = c(4,4,4,4))
+  plot(pip_0.6b, border= NA, fmt.key ="%.1f", xlab= "Mutant Uptake Rate, u_n", ylab = "Resident Uptake Rate, u_m", col = c('white','black') ) #plotted.
+```
+
+### Four panel plot for when b = 0.6
+```{r}
+b <- 0.6
+Hset2 <- host_uptake(b, u_m, R, H, M)
+uset2 <- seq(0, 1, 1/100)
+
+par(mfrow=c(2,2), mar = c(5,5,1,1)) # mfrow= makes four panel plot, 2 rows and 2 columns. whee; mar = c(bottom, left, top, right ) margin lengths!!
+plot(x = uset2, y = Hset2$Hset, lwd = 2, xlab = "Uptake Rate, u_m", ylab = "Host Abundance at \n equilibrium, H*", col = 'darkgreen') # \n=  new line here.
+plot(x = uset2, y = Hset2$Mset, lwd = 2, xlab = "Uptake Rate, u_m", ylab = "Resident Abundance \n at equilibrium, M*", col = 'skyblue') 
+plot(x = uset2, y = Hset2$Rset, lwd = 2, xlab = "Uptake Rate, u_m", ylab = "Resource Abundance \n at equilibrium, R*", col = 'maroon') 
+par(mar = c(5,5,1,3))
+plot(pip_0.6b, border= NA,  fmt.key ="%.2f", xlab= "Mutant Uptake Rate, u_n", ylab = "Resident Uptake Rate, u_m", col = c('white','black') ) 
+
+```
+
+## No. 7 Let's define the value of b first! b = 0.7
+```{r}
+b <- 0.7
+```
+
+### Next, we would be calling the *PIP function* to make our PIP!
+```{r}
+pip_0.7b <- pip(b, 1/40) # this is by 1/40 of a step, which means that there are 41 columns and rows in total. In other words, our values of u_m that ranges from 0 to 1 are sliced up into 41 pieces (because we're also including 0 that's where the extra 1 piece is from.)
+
+library('plot.matrix')
+  par(mar = c(4,4,4,4))
+  plot(pip_0.7b, border= NA, fmt.key ="%.1f", xlab= "Mutant Uptake Rate, u_n", ylab = "Resident Uptake Rate, u_m", col = c('white','black') ) #plotted.
+```
+
+### Four panel plot for when b = 0.7
+```{r}
+b <- 0.7
+Hset2 <- host_uptake(b, u_m, R, H, M)
+uset2 <- seq(0, 1, 1/100)
+
+par(mfrow=c(2,2), mar = c(5,5,1,1)) # mfrow= makes four panel plot, 2 rows and 2 columns. whee; mar = c(bottom, left, top, right ) margin lengths!!
+plot(x = uset2, y = Hset2$Hset, lwd = 2, xlab = "Uptake Rate, u_m", ylab = "Host Abundance at \n equilibrium, H*", col = 'darkgreen') # \n=  new line here.
+plot(x = uset2, y = Hset2$Mset, lwd = 2, xlab = "Uptake Rate, u_m", ylab = "Resident Abundance \n at equilibrium, M*", col = 'skyblue') 
+plot(x = uset2, y = Hset2$Rset, lwd = 2, xlab = "Uptake Rate, u_m", ylab = "Resource Abundance \n at equilibrium, R*", col = 'maroon') 
+par(mar = c(5,5,1,3))
+plot(pip_0.7b, border= NA,  fmt.key ="%.2f", xlab= "Mutant Uptake Rate, u_n", ylab = "Resident Uptake Rate, u_m", col = c('white','black') ) 
+
+```
+
+## No. 8 Let's define the value of b first! b = 0.8
+```{r}
+b <- .8
+```
+
+### Next, we would be calling the *PIP function* to make our PIP!
+```{r}
+pip_0.8b <- pip(b, 1/40) # this is by 1/40 of a step, which means that there are 41 columns and rows in total. In other words, our values of u_m that ranges from 0 to 1 are sliced up into 41 pieces (because we're also including 0 that's where the extra 1 piece is from.)
+
+library('plot.matrix')
+  par(mar = c(4,4,4,4))
+  plot(pip_0.8b, border= NA, fmt.key ="%.1f", xlab= "Mutant Uptake Rate, u_n", ylab = "Resident Uptake Rate, u_m", col = c('white','black') ) #plotted.
+```
+
+### Four panel plot for when b = 0.8
+```{r}
+b <- 0.8
+Hset2 <- host_uptake(b, u_m, R, H, M)
+uset2 <- seq(0, 1, 1/100)
+
+par(mfrow=c(2,2), mar = c(5,5,1,1)) # mfrow= makes four panel plot, 2 rows and 2 columns. whee; mar = c(bottom, left, top, right ) margin lengths!!
+plot(x = uset2, y = Hset2$Hset, lwd = 2, xlab = "Uptake Rate, u_m", ylab = "Host Abundance at \n equilibrium, H*", col = 'darkgreen') # \n=  new line here.
+plot(x = uset2, y = Hset2$Mset, lwd = 2, xlab = "Uptake Rate, u_m", ylab = "Resident Abundance \n at equilibrium, M*", col = 'skyblue') 
+plot(x = uset2, y = Hset2$Rset, lwd = 2, xlab = "Uptake Rate, u_m", ylab = "Resource Abundance \n at equilibrium, R*", col = 'maroon') 
+par(mar = c(5,5,1,3))
+plot(pip_0.8b, border= NA,  fmt.key ="%.2f", xlab= "Mutant Uptake Rate, u_n", ylab = "Resident Uptake Rate, u_m", col = c('white','black') ) 
+
+```
+
+## No. 9 Let's define the value of b first! b = 0.9
+```{r}
+b <- 0.9
+```
+
+### Next, we would be calling the *PIP function* to make our PIP!
+```{r}
+pip_0.9b <- pip(b, 1/40) # this is by 1/40 of a step, which means that there are 41 columns and rows in total. In other words, our values of u_m that ranges from 0 to 1 are sliced up into 41 pieces (because we're also including 0 that's where the extra 1 piece is from.)
+
+library('plot.matrix')
+  par(mar = c(4,4,4,4))
+  plot(pip_0.9b, border= NA, fmt.key ="%.1f", xlab= "Mutant Uptake Rate, u_n", ylab = "Resident Uptake Rate, u_m", col = c('white','black') ) #plotted.
+```
+
+### Four panel plot for when b = 0.9
+```{r}
+b <- 0.9
+Hset2 <- host_uptake(b, u_m, R, H, M)
+uset2 <- seq(0, 1, 1/100)
+
+par(mfrow=c(2,2), mar = c(5,5,1,1)) # mfrow= makes four panel plot, 2 rows and 2 columns. whee; mar = c(bottom, left, top, right ) margin lengths!!
+plot(x = uset2, y = Hset2$Hset, lwd = 2, xlab = "Uptake Rate, u_m", ylab = "Host Abundance at \n equilibrium, H*", col = 'darkgreen') # \n=  new line here.
+plot(x = uset2, y = Hset2$Mset, lwd = 2, xlab = "Uptake Rate, u_m", ylab = "Resident Abundance \n at equilibrium, M*", col = 'skyblue') 
+plot(x = uset2, y = Hset2$Rset, lwd = 2, xlab = "Uptake Rate, u_m", ylab = "Resource Abundance \n at equilibrium, R*", col = 'maroon') 
+par(mar = c(5,5,1,3))
+plot(pip_0.9b, border= NA,  fmt.key ="%.2f", xlab= "Mutant Uptake Rate, u_n", ylab = "Resident Uptake Rate, u_m", col = c('white','black') ) 
+
+```
+
+## No. 10 Let's define the value of b first! b = 1.0
+```{r}
+b <- 1.0
+```
+
+### Next, we would be calling the *PIP function* to make our PIP!
+```{r}
+pip_1.0b <- pip(b, 1/40) # this is by 1/40 of a step, which means that there are 41 columns and rows in total. In other words, our values of u_m that ranges from 0 to 1 are sliced up into 41 pieces (because we're also including 0 that's where the extra 1 piece is from.)
+
+library('plot.matrix')
+  par(mar = c(4,4,4,4))
+  plot(pip_1.0b, border= NA, fmt.key ="%.1f", xlab= "Mutant Uptake Rate, u_n", ylab = "Resident Uptake Rate, u_m", col = c('white','black') ) #plotted.
+```
+
+### Four panel plot for when b = 1.0
+```{r}
+b <- 1.0
+Hset2 <- host_uptake(b, u_m, R, H, M)
+uset2 <- seq(0, 1, 1/100)
+
+par(mfrow=c(2,2), mar = c(5,5,1,1)) # mfrow= makes four panel plot, 2 rows and 2 columns. whee; mar = c(bottom, left, top, right ) margin lengths!!
+plot(x = uset2, y = Hset2$Hset, lwd = 2, xlab = "Uptake Rate, u_m", ylab = "Host Abundance at \n equilibrium, H*", col = 'darkgreen') # \n=  new line here.
+plot(x = uset2, y = Hset2$Mset, lwd = 2, xlab = "Uptake Rate, u_m", ylab = "Resident Abundance \n at equilibrium, M*", col = 'skyblue') 
+plot(x = uset2, y = Hset2$Rset, lwd = 2, xlab = "Uptake Rate, u_m", ylab = "Resource Abundance \n at equilibrium, R*", col = 'maroon') 
+par(mar = c(5,5,1,3))
+plot(pip_1.0b, border= NA,  fmt.key ="%.2f", xlab= "Mutant Uptake Rate, u_n", ylab = "Resident Uptake Rate, u_m", col = c('white','black') ) 
+
+```
+
+#### Fin, now your final task is to put this on overleaf, along with the equations, and a brief explanation of what you did what b is, etc.
+#### oh also this needs to be on github. Along with our updated fid3, because the previous fid3 was a mess.
