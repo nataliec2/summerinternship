@@ -1,7 +1,7 @@
 #!/usr/bin/env wolframscript
 (* ::Package:: *)
 
-(* ::Section::Closed:: *)
+(* ::Section:: *)
 (*Introduction*)
 
 
@@ -71,7 +71,10 @@ mutX::usage = "mutX is our invasion fitness equation. It is the change in mutant
 (*dGrowth::usage = "dGrowth estimates the partial derivative of the mutant growth rate, evaluated at the resident's transmission rates. Returns {\[PartialD]growth/\[PartialD]h, \[PartialD]growth/\[PartialD]v}.";
 dGrowthList::usage = "dGrowthTable produces a list of derivatives of mutant growth rates when rare.";*)
 
-(*d \[Rule] 0.5, r0 \[Rule] 25, c \[Rule] 7/10, v \[Rule] 1/10, s \[Rule] 1/20, ca \[Rule] 3/10, cc \[Rule] 2/10, lx \[Rule] 2/10, g \[Rule] 4/5, l \[Rule] 1/20, z \[Rule] 3/10, b \[Rule] ?*)
+(*d \[Rule] 1/2, r0 \[Rule] 25, c \[Rule] 7/10, v \[Rule] 1/10, s \[Rule] 1/20, ca \[Rule] 3/10, cc \[Rule] 2/10, lx \[Rule] 2/10, g \[Rule] 4/5, l \[Rule] 1/20, z \[Rule] 3/10, b \[Rule] ?*)
+
+(*Adjustment to host traits.*)
+(*d \[Rule] 1/2, r0 = 25, c = 74/100, v \[Rule] 1/10, s \[Rule] 3/100, ca \[Rule] 32/100, cc \[Rule] 18/100, lx \[Rule] 15/100, g \[Rule] 84/100, l \[Rule] 1/10, z \[Rule] 3/10*)
 (*!!!!highlight + cmd + / to comment things!!!!*)
 
 
@@ -112,7 +115,7 @@ AllTrue[Eigenvalues[jacobian], Negative]
 
 
 (* ::Section:: *)
-(*Ecological Equilibria*)
+(*Ecological Equilibria (pre-invasion!)*)
 
 
 (* ::Text:: *)
@@ -120,8 +123,29 @@ AllTrue[Eigenvalues[jacobian], Negative]
 
 
 drdt[r_, h_, m_, d_, r0_, c_, v_, s_, ca_, cc_, b_, lx_, g_, l_, z_, um_] := d (r0 - r) + s h 1/c - um r m + (lx um m r)/(lx + (g h))(* whole equation for dR/dt goes here *)
-dhdt[r_, h_, m_, d_, r0_, c_, v_, s_, ca_, cc_, b_, lx_, g_, l_, z_, um_] := c g ((um m r)/(lx + (g h))) h - s h - (b (um r)/(lx + (g h)) ca + cc) m h 
-dmdt[r_, h_, m_, d_, r0_, c_, v_, s_, ca_, cc_, b_, lx_, g_, l_, z_, um_] := v (1 - (z um) (b (um r)/(lx + (g h)) ca + cc)) m h - l m
+dhdt[r_, h_, m_, d_, r0_, c_, v_, s_, ca_, cc_, b_, lx_, g_, l_, z_, um_] := c g ((um m r)/(lx + (g h))) h - s h - ((b (um r)/(lx + (g h)) ca) + cc) m h 
+dmdt[r_, h_, m_, d_, r0_, c_, v_, s_, ca_, cc_, b_, lx_, g_, l_, z_, um_] := v ((1 - (z um)) ((b (um r)/(lx + (g h)) ca) + cc)) m h - l m
+
+
+(* ::Text:: *)
+(*drdt*)
+
+
+d (r0 - r) + s h 1/c - um r m + (lx um m r)/(lx + (g h))
+
+
+(* ::Text:: *)
+(*dhdt*)
+
+
+c g ((um m r)/(lx + (g h))) h - s h - ((b (um r)/(lx + (g h)) ca) + cc) m h 
+
+
+(* ::Text:: *)
+(*dmdt*)
+
+
+v ((1 - (z um)) ((b (um r)/(lx + (g h)) ca) + cc)) m h - l m
 
 
 (* ::Text:: *)
@@ -175,7 +199,7 @@ Module[{equilibria},
 ]
 
 
-(* ::Subsubsection::Closed:: *)
+(* ::Subsubsection:: *)
 (*stableEquilList function! takes  a list of resident trait values as input at which to find stable equilibria . *)
 
 
@@ -264,7 +288,7 @@ Flatten[Table[{traitListuno[[i]], traitListuno[[j]]},
 
 
 (* ::Subsubsection::Closed:: *)
-(*Hopeless attempt of editing our lists, keeping it for the laughs..*)
+(*Hopeless attempts of editing our lists, keeping it for the laughs..*)
 
 
 r1eq[p_,q_] := ldpr[traitLister, 1/2, 25, 7/10, 1/10, 1/20, 3/10, 2/10, 2/10, 4/5, 1/20, 3/10][[p,q]]
@@ -323,18 +347,6 @@ Select[test1, #[[1]] < 5&]
 (*Extract[%76[[1,2]],{1,1}]*)
 
 
-rldprrr := TakeList[ldprrr, {1,2,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2}]
-
-
-rldprrr
-
-
-fldpr := Flatten[Select[rldprrr,  #[[1]] <  25 &]]
-
-
-fldpr
-
-
 (* ::Text:: *)
 (*Let' s try dropping, drop every other element .*)
 
@@ -389,9 +401,6 @@ Flatten[req] (*How to remove excess curly braces*)
 Clear[q] 
 
 
-sreq2 = {25.,8.73537461967574,4.4285422517036315,24.999999999999993,25.000000000000004,25.,25.000000000000004,25.000000000000004,24.999999999999986,24.99999999999999,25.,25.000000000000004,25.00000000000001,25.,25.000000000000014,25.000000000000004,24.999999999999986,24.999999999999993,24.999999999999996,24.999999999999996,24.999999999999996,25.,25.000000000000007,25.000000000000014,25.000000000000004,25.,24.999999999999993,0.515941072142575,0.5105976815333032,0.5062322035237973,0.5027982246647518,0.5002603020489491,0.4985930189507557,0.4977803312471313,0.49781517245114737,0.4986992987974486,0.5004433679945054,0.5030672570090124,0.5066006365392539,0.5110838337102814}
-
-
 (* ::Text:: *)
 (*List Density Plot creation whoopers .. isn't working......, U w U, so weird why aren't the data points showing up :/*)
 
@@ -420,7 +429,13 @@ ListDensityPlot[{{0, 0, 25.}, {1/40, 1/40, 8.73537461967574}, {1/20, 1/20, 4.428
 (*stableEquilList[traitList_, d_, r0_, c_, v_, s_, ca_, cc_, lx_, g_, l_, z_,*)
 
 
-stableEquilList[traitList, 1/2, 25, 7/10, 1/10, 1/20, 3/10, 2/10, 2/10, 4/5, 1/20, 3/10]
+(*stableEquilList[traitList_, d_, r0_, c_, v_, s_, ca_, cc_, lx_, g_, l_, z_,*)
+
+
+(*d \[Rule] 1/2, r0 = 25, c = 74/100, v \[Rule] 1/10, s \[Rule] 3/100, ca \[Rule] 32/100, cc \[Rule] 18/100, lx \[Rule] 15/100, g \[Rule] 84/100, l \[Rule] 1/10, z \[Rule] 3/10*)
+
+
+stableEquilList[traitList, 1/2, 25, 74/100, 1/10, 3/100, 32/10, 18/100, 15/100, 84/100, 1/10, 3/10]
 
 
 ?Nest
@@ -439,8 +454,8 @@ stableEquilList[traitList, 1/2, 25, 7/10, 1/10, 1/20, 3/10, 2/10, 2/10, 4/5, 1/2
 3 // #^2 & (*when you forget to write a function*)
 
 
-(* ::Subsubsection:: *)
-(*Baseline R* value generator here.*)
+(* ::Subsubsection::Closed:: *)
+(*1. Baseline R* value generator here.*)
 
 
 stableEquilr[um_, b_, d_, r0_, c_, v_, s_, ca_, cc_, lx_, g_, l_, z_,  precision_: MachinePrecision] := 
@@ -461,9 +476,6 @@ Module[{equilibriar},
   
   Return[equilibriar]
 ]
-
-
-(*d \[Rule] 0.5, r0 \[Rule] 25, c \[Rule] 7/10, v \[Rule] 1/10, s \[Rule] 1/20, ca \[Rule] 3/10, cc \[Rule] 2/10, lx \[Rule] 2/10, g \[Rule] 4/5, l \[Rule] 1/20, z \[Rule] 3/10, b \[Rule] ?*)
 
 
 (*Noppers.*)
@@ -491,14 +503,25 @@ tempo = Table[{(*traitLister[[i, 1]], traitLister[[i, 2]],*)tempo[[i]]}, {i, Len
 Return[tempo]]
 
 
-(*Select[Flatten[ldpr[traitLister, 1/2, 25, 7/10, 1/10, 1/20, 3/10, 2/10, 2/10, 4/5, 1/20, 3/10],2], MemberQ[#, {25}]&]*)
+(* ::Text:: *)
+(*original parameter values*)
+
+
+(*d \[Rule] 1/2, r0 \[Rule] 25, c \[Rule] 7/10, v \[Rule] 1/10, s \[Rule] 1/20, ca \[Rule] 3/10, cc \[Rule] 2/10, lx \[Rule] 2/10, g \[Rule] 4/5, l \[Rule] 1/20, z \[Rule] 3/10, b \[Rule] ?*)
+
+
+(* ::Text:: *)
+(*Adjusted parameter values.*)
+
+
+(*d \[Rule] 1/2, r0 = 25, c = 74/100, v \[Rule] 1/10, s \[Rule] 3/100, ca \[Rule] 32/100, cc \[Rule] 18/100, lx \[Rule] 15/100, g \[Rule] 84/100, l \[Rule] 1/10, z \[Rule] 3/10*)
 
 
 ldprr = ldpr[traitLister, 1/2, 25, 7/10, 1/10, 1/20, 3/10, 2/10, 2/10, 4/5, 1/20, 3/10]
 
 
-(* ::Subsubsection:: *)
-(*UPDATED: A function that takes the first equilibria of all stuff within the list.*)
+(* ::Subsubsection::Closed:: *)
+(*2. UPDATED: A function that takes the first equilibria of all stuff within the list.*)
 
 
 (* ::Text:: *)
@@ -544,8 +567,8 @@ Return[tempo]]
 listthatgoesintolpdr[traitLister, 1/2, 25, 7/10, 1/10, 1/20, 3/10, 2/10, 2/10, 4/5, 1/20, 3/10]
 
 
-(* ::Subsubsection:: *)
-(*Moment of truth! Running code to create LDP. IT WORKED.*)
+(* ::Subsubsection::Closed:: *)
+(*3. Moment of truth! Running code to create LDP. IT WORKED.*)
 
 
 (* ::Text:: *)
@@ -572,10 +595,10 @@ Select[finldprr, # != 25. &]
 ListDensityPlot[{listthatgoesintolpdr[traitLister, 1/2, 25, 7/10, 1/10, 1/20, 3/10, 2/10, 2/10, 4/5, 1/20, 3/10]}, PlotRange -> {Full, Full, {minRstar, maxRstar}}, ClippingStyle -> {Black, White}, ColorFunction->ColorData["MintColors"], DataRange -> Automatic, ColorFunctionScaling-> True, PlotLegends-> Automatic, PlotRange-> Automatic, FrameLabel -> {"Uptake Rate, um", "fidelity, b" }]
 
 
-Export["rstar.png", %]
+Export["rstartrue.png", %]
 
 
-(* ::Section:: *)
+(* ::Section::Closed:: *)
 (*Host : Making ListDensity Plots for H* changing parameter values b, and u *)
 
 
@@ -591,11 +614,7 @@ Module[{equilibriah},
   
   (* Select the stable equilibria *)
   equilibriah =  Select[equilibriah, negativeEigQ[myJacobian[r/.#, h/.#, m/.#, d, r0, c, v, s, ca, cc, b, lx, g, l, z, um]]&];
- 
- (* While our the first term of equilibriar is < 25, Drop the second term.
-  equilbriar = While[equilibriar #[[1]]& < 25 &; Drop #[[2]]&
-  but this will likely not work if parantheses issue is not resolved*)
-  
+
   (* Have equilibria be returned as numbers instead of r \[Rule] number *)
   equilibriah = Map[{h/.#}&, equilibriah];
   
@@ -671,7 +690,7 @@ rae2 = Map[Last, rae]  (*!! Alexandra Knowledge !!*)
 ?Last
 
 
-(* ::Subsubsection:: *)
+(* ::Subsubsection::Closed:: *)
 (*4. Create a list that includes trait values! *)
 
 
@@ -703,7 +722,7 @@ listthatgoesintolpdh[traitLister, 1/2, 25, 7/10, 1/10, 1/20, 3/10, 2/10, 2/10, 4
 ListDensityPlot[{listthatgoesintolpdh[traitLister, 1/2, 25, 7/10, 1/10, 1/20, 3/10, 2/10, 2/10, 4/5, 1/20, 3/10]}, ColorFunction->ColorData["MintColors"], DataRange -> Automatic, ColorFunctionScaling-> True, PlotLegends-> Automatic, PlotRange -> {Full, Full, {minHstar, maxHstar}}, ClippingStyle -> {White, Pink}, FrameLabel -> {"Uptake Rate, um","fidelity, b"}]
 
 
-Export["hstarvsumvsb.png", %]
+Export["hstartrue.png", %]
 
 
 (* ::Subsubsection::Closed:: *)
@@ -760,7 +779,7 @@ Sort[templdph, {1, 2, 3}]
 (*Resident : Making ListDensity Plots for M* changing parameter values b, and u *)
 
 
-(* ::Subsubsection:: *)
+(* ::Subsubsection::Closed:: *)
 (*1. finding equilibrium values by using stableEquil   *)
 
 
@@ -784,7 +803,7 @@ Module[{equilibriam},
 ]
 
 
-(* ::Subsubsection:: *)
+(* ::Subsubsection::Closed:: *)
 (*2. Generate a list of All possible Hstars that Jacobian produces negative eigenvalues (real roots)*)
 
 
@@ -819,10 +838,10 @@ raeb2 = Map[Last, raeb]
 (*finding max and min Mstar . That are of value to us .*)
 
 
-Flatten[Select[raeb, (Length[#] == 2 && !(# == {0, 0})) || Length[#] ==3&]] (*! is NOT*) (*Remember to change 22 when necessary.*)
+Flatten[Select[raeb, (Length[#] == 2 && !(# == {0, 0})) || Length[#] ==3&]] (*! is NOT*) 
 
 
-traeb = Select[%, Chop[#] > 0 &] (*This is tr\[EAcute]s cool. Not even kidding*) (*Remember to change 22 when necessary.*)
+traeb = Select[%, Chop[#] > 0 &] (*This is tr\[EAcute]s cool. Not even kidding*) 
 
 
 {minMstar, maxMstar} = {Min[traeb], Max[traeb]} 
@@ -851,17 +870,44 @@ finalistm[traitLister, 1/2, 25, 7/10, 1/10, 1/20, 3/10, 2/10, 2/10, 4/5, 1/20, 3
 
 
 (* ::Subsubsection:: *)
-(*4. Finding umMin, for evol function.*)
+(*4. Finding umMin, for evol function. ignore this subsection.*)
 
 
-Select[%, #[[3]] > 0 &] (*finalistm*)
+(*Rather than doing this, it'll be more efficient to just stare at finalistm! after umMin, the string of consequtive elements would also have to produce positive Mstars.*)
+
+
+(* ::Text:: *)
+(*{0,1/40,1/20,3/40,1/10,1/8,3/20,7/40,1/5,9/40,1/4,11/40,3/10,13/40,7/20,3/8,2/5,17/40,9/20,19/40,1/2,21/40,11/20,23/40,3/5,5/8,        13/20,27/40,7/10,29/40,3/4,31/40,4/5,33/40,17/20,7/8,9/10,37/40, 19/20,       39/40,1}*)
+
+
+(*Select the value of um that is the lowest.*)
+
+
+(* ::Text:: *)
+(*umMinList*)
+
+
+(*prosp = Select[%42, #[[3]] !=  0&]*)
+
+
+Extract[umMinList, 27]
+
+
+Clear[way]
+
+
+Select[%42, #[[2]] == 7/10 && #[[3]] != 0 &][[1]] (*%42 was finalistm*)
+
+
+(* ::Text:: *)
+(*This isn' t umMin!!!!*)
+
+
+Clear[umMin]
 
 
 umMin = Select[%, #[[3]] > 0 & , 1][[All, 1]]
-umMin = 1/40
-
-
-(*Natalie isn't sure whether the function was written as um, b or b, um. if that makes any sense at all...*)
+(*umMin = 1/40*)
 
 
 (*Nevermind, she found out that stableequil takes um_, b_ as parameter inputs! :) Wheee*)
@@ -874,7 +920,7 @@ umMin = 1/40
 ListDensityPlot[{finalistm[traitLister, 1/2, 25, 7/10, 1/10, 1/20, 3/10, 2/10, 2/10, 4/5, 1/20, 3/10]}, ColorFunction->ColorData["MintColors"], DataRange -> Automatic, ColorFunctionScaling-> True, PlotLegends-> Automatic, PlotRange -> {Full, Full, {minMstar, maxMstar}}, ClippingStyle -> {White, Pink}, FrameLabel -> {"Uptake Rate, um", "fidelity, b"}]
 
 
-Export["mstar.png", %]
+Export["mstarreal.png", %]
 
 
 (* ::Subsection::Closed:: *)
@@ -1025,7 +1071,22 @@ stableEquilList[traitList, 0.5, 25, 0.7, 0.1, 0.05, 0.3, 0.2, 0.2, 0.8, 0.05, 0.
 (*make dervmutx take r and h  at equil.*)
 
 
-mutX[r_, h_, d_, r0_, c_, v_, s_, ca_, cc_, lx_, g_, l_, z_, b_] := v (1- (un z)) (cc + ((b un r)/(lx + g h)) h - l)(*mutX = Invasion fitness. *)
+(*v ((1 - (z um)) ((b (um r)/(lx + (g h)) ca) + cc)) m h - l m*)
+
+
+v ((1 - (z un)) ((b (un r)/(lx + (g h)) ca) + cc)) h - l
+
+
+Simplify[D[mutX[r, h, d, r0, c, v, s, ca, cc, lx, g, l, z, b], un]]
+
+
+(* ::Text:: *)
+(*The derivative of mutX will come out to be : constant - um, causing a negative slope with um at the x - axis .*)
+(*Currently system is evolving towards lower um== lower host fitness, but there's still fidelity that might changes things.*)
+(*-> the host wants a good partner it'll have to be faithful even though the partner would be the worse it could possibly be.*)
+
+
+mutX[r_, h_, d_, r0_, c_, v_, s_, ca_, cc_, lx_, g_, l_, z_, b_] := v ((1 - (z un)) ((b (un r)/(lx + (g h)) ca) + cc)) h - l (*mutX = Invasion fitness. *)
 dervmutX[r_, h_, d_, r0_, c_, v_, s_, ca_, cc_, lx_, g_, l_, z_, b_]:= D[mutX[r, h, d, r0, c, v, s, ca, cc, lx, g, l, z, b], un] (*This function takes the derivative of the Invasion Fitness*)
 
 
@@ -1268,6 +1329,32 @@ NSolve[% == 0] (** %%,%%%,%%%% goes back 2-4 previous output.)
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 (* ::Subsubsection::Closed:: *)
 (*b =.9; um = 1/40*)
 
@@ -1312,7 +1399,7 @@ ListDensityPlot[{1,0,1},{0,1,0}, Mesh-> All]
 
 
 (* ::Subsubsection:: *)
-(*Helper Functions 2.0.*)
+(*Ecological Equil 2.0.*)
 
 
 stableEquilr[um_, b_, d_, r0_, c_, v_, s_, ca_, cc_, lx_, g_, l_, z_,  precision_: MachinePrecision] := 
@@ -1335,24 +1422,6 @@ Module[{equilibriar},
 ]
 
 
-(* ::Text:: *)
-(*stableEquilR list.*)
-
-
-rEquilist[traitLister, d_, r0_, c_, v_, s_, ca_, cc_, lx_, g_, l_, z_, precision_:MachinePrecision] := 
-Module[{tempo}, 
-(* Make a table of stable equilibria *)
-tempo=Table[stableEquilr[traiter[[1]], traiter[[2]], d, r0, c, v, s, ca, cc, lx, g, l, z, precision], {traiter, traitLister}];
-
-(* Sort the equilibria for each pair of uptake rates *)
-tempo = Map[Sort, tempo];
-
-(* Add the trait values that produced the equilibrium/equilibria *)
-tempo = Table[{tempo[[i]]}, {i, Length[traitLister]}];
-
-Return[tempo]]
-
-
 stableEquilh[um_, b_, d_, r0_, c_, v_, s_, ca_, cc_, lx_, g_, l_, z_,  precision_: MachinePrecision] := 
 Module[{equilibriah},
   (* Find all equilibria, Reals throws out imaginary roots *)
@@ -1367,24 +1436,6 @@ Module[{equilibriah},
   
   Return[equilibriah]
 ]
-
-
-(* ::Text:: *)
-(*stableEquilH list*)
-
-
-hEquilist[traitLister, d_, r0_, c_, v_, s_, ca_, cc_, lx_, g_, l_, z_, precision_:MachinePrecision] := 
-Module[{tempo}, 
-(* Make a table of stable equilibria *)
-tempo=Table[stableEquilh[traiter[[1]], traiter[[2]], d, r0, c, v, s, ca, cc, lx, g, l, z, precision], {traiter, traitLister}];
-
-(* Sort the equilibria for each pair of uptake rates *)
-tempo = Map[Sort, tempo];
-
-(* Add the trait values that produced the equilibrium/equilibria *)
-tempo = Table[{tempo[[i]]}, {i, Length[traitLister]}];
-
-Return[tempo]]
 
 
 (*um = 0.5; d = 0.5; r0 = 25; c = 7/10; v = 1/10; s = 1/20; ca = 3/10; cc = 2/10; lx = 2/10; g = 4/5; l = 1/20; z = 3/10; b = .5 *)
@@ -1441,7 +1492,7 @@ Sort[{{25, 0, 0}, {14, 1, 1}}, #1[[1]] < #2[[1]]&]
 dervmutX1
 
 
-(* ::Subsubsection:: *)
+(* ::Subsubsection::Closed:: *)
 (*While loop notes.*)
 
 
@@ -1517,62 +1568,126 @@ x
 
 
 (* ::Text:: *)
-(*3/8 Notes: 1. get umMin from when you calculated the equilibria: it's the lowest um that produces positive Mstar.*)
 (*|| or! make an interpolating function outside of esstraitval.*)
 
 
-umMin = 7/10
+(* ::Text:: *)
+(*check to see whether function below would fully stop we come across dervmutX = 0*)
 
 
-umMin
+1/20*10
 
 
-esstraitval[umMin_, b_, d_, r0_, c_, v_, s_, ca_, cc_, lx_, g_, l_, z_] := 
-(*perks of using a module, what happens in the module stays. In the module.*)(*I.e. if there ever was something named b, forget it and do the following to it instead.*)
+Length[2]
+
+
+stableEquilr[1/20, 7/20, 1/2, 25, 7/10, 1/10, 1/20, 3/10, 2/10, 2/10, 4/5, 1/20, 3/10]
+
+
+stableEquilh[1/20, 7/20, 1/2, 25, 7/10, 1/10, 1/20, 3/10, 2/10, 2/10, 4/5, 1/20, 3/10]
+
+
+um_, b_, d_, r0_, c_, v_, s_, ca_, cc_, lx_, g_, l_, z_
+
+
+Sort[Flatten[stableEquilr[1/20, 7/20, 1/2, 25, 7/10, 1/10, 1/20, 3/10, 2/10, 2/10, 4/5, 1/20, 3/10]]][[1]]
+
+
+Sort[Flatten[stableEquilh[1/20, 7/20, 1/2, 25, 7/10, 1/10, 1/20, 3/10, 2/10, 2/10, 4/5, 1/20, 3/10]],Greater][[1]]
+
+
+Sort[{{1}, {3}, {2}}, Greater]
+
+
+dervmutX[16.860396736734263, 0, 1/2, 25, 7/10, 1/10, 1/20, 3/10, 2/10, 2/10, 4/5, 1/20, 3/10, 7/20]
+
+
+(* ::Text:: *)
+(*We removed this part, and decided that all esstraitval needs is the while loop! *)
+
+
+(*Sort takes elements in order of their magnitude/value, [[1]] tells it to take n + 1 input of the list with each run*) 
+(*stableEquilr1 = Sort[stableEquilr[um, b, d, r0, c, v, s, ca, cc, lx, g, l, z]][[1,1]]; 
+stableEquilh1 = Sort[stableEquilh[um, b, d, r0, c, v, s, ca, cc, lx, g, l, z], Greater][[1,1]];
+
+(*Call dervmutX*)
+dervmutX1 = dervmutX[stableEquilr1,stableEquilh1, d, r0, c, v, s, ca, cc, lx, g, l, z, b]; 
+
+(*Solving the invasion fitness for when it is zero; and naming it exp*)
+exp = NSolve[dervmutX1 == 0, un]; (*outputs un \[Rule] value*)
+Print["got to NSolve outside of while."];
+
+(*If if statements holds true, the code would stop here and not run the while loop.*)
+(*This line of code says that if the un that you solved from exp equals to the um that you inputed, return um.*) (*Maybe this is why it always outputs umMin?*)
+If[(un /. exp) == um, Print["found un == um! "];Return[um]]; (*/. \[Equal] um Corrects for \[Rule]*)  (*Natalie added print but it didn't print. maybe it run past here, and shouldn't be returning um?*)
+
+(*Adjust um in the direction where the fitness is increasing*)
+um = um + 0.01 * (dervmutX1/. un -> um);*) (*Take all of the un in dervmutX1 and put in the value of um in it*)
+
+(*Record our ultimate um_ess-es (ultium).Where should I be calling um?*)
+
+
+(* ::Text:: *)
+(*Note about esstraitval : - All the "Print"s that might or might not' ve been commented out, are good ways to check how far your function ran till. *)
+(*Think about what changing all of these things changes. *)
+(*	i. initial umMin.*)
+(*	ii. counter.*)
+(*	iii. Chop tolerance. *)
+(*	xiv. how far you move away from um!*)
+
+
+esstraitval[umMinList_, b_, d_, r0_, c_, v_, s_, ca_, cc_, lx_, g_, l_, z_] := 
+(*perks of using a module, what happens in the module stays. In the module; i.e. if there ever was something named b, forget it and do the following to it instead.*)
 (*Perk above only applies to the stuff that you put into curly braces below! *)
 Module[{stableEquilr1, stableEquilh1, dervmutX1, exp, um, ultium},
 
+umIn = 7/20; (*Lowest um value on list, take that as our initial um.*) (*first iteration was done with 3/4!*)
+um = umIn;
 
-(*Define um and b*)
-(*note 1 here.*) 
-um = umMin ;
-
-(*Should I be calling the list here, or just stable equil? stableEquil should be right because we want the stable equil of that specific um value!*)
-(*Flatten doesn't wrk for these.*)
-stableEquilr1 = Sort[stableEquilr[um, b, d, r0, c, v, s, ca, cc, lx, g, l, z]][[1,1]]; (*Sort takes elements in order of their magnitude/value, [[1]] tells it to take n + 1 input of the list with each run*)
-stableEquilh1 = Sort[stableEquilh[um, b, d, r0, c, v, s, ca, cc, lx, g, l, z], Greater][[1,1]];
-
-(*Call dervmutX*)
-dervmutX1 =Flatten[dervmutX[stableEquilr1,stableEquilh1, d, r0, c, v, s, ca, cc, lx, g, l, z, b]]; 
-
-(*Solving the invasion fitness for when it is zero; and naming it exp*)
-exp = NSolve[dervmutX1 == 0, un]; (*outputs um \[Rule] value*)
-(*Print["got to NSolve outside of while."];*)
-
-(*If if statements holds true, the code would stop here and not run the while loop.*)
-If[(un /. exp) == um, Return[um]]; (*/. \[Equal] um Corrects for \[Rule]*) 
-
-(*Adjust um in the direction where the fitness is increasing*) (*Maybe adjustment isn't working?*)
-um = um + 0.01 * (dervmutX1/. un -> um); (*Take all of the un in dervmutX1 and put in the value of um in it*)
-
-(*Record our ultimate um_ess-es (ultium).Where should I be calling um?*)
 counter = 0;
-While[counter < 2000, (*le test, counter: don't do it more than 1000 times*)
-(*Everything below this position is the body.*)
+While[counter < 3000, (*le test, counter: don't do it more than 5000 times*)
+(*Everything below is the body.*)
 counter = counter +1; 
-stableEquilr1 =Sort[stableEquilr[um, b, d, r0, c, v, s, ca, cc, lx, g, l, z]][[1,1]];(*Sort takes elements in order of their magnitude/value, [[1]] tells it to take n + 1 input of the list with each run*)
-stableEquilh1 = Sort[stableEquilh[um, b, d, r0, c, v, s, ca, cc, lx, g, l, z], Greater][[1,1]];
-(*Call dervmutX*)
-dervmutX1 =Flatten[dervmutX[stableEquilr1,stableEquilh1, d, r0, c, v, s, ca, cc, lx, g, l, z, b]]; 
 
+(*Calling stable equilibrias*)
+stableEquilr1 =stableEquilr[um, b, d, r0, c, v, s, ca, cc, lx, g, l, z];
+stableEquilh1 = stableEquilh[um, b, d, r0, c, v, s, ca, cc, lx, g, l, z];
+
+(*Check that there are equilibrias present!*)
+If[Length[stableEquilr1] == 0, Print["we tested if there are resource equilibriums, and theres not!"];Print[um]; Break[]];
+If[Length[stableEquilh1] == 0, Print["we tested if there are host equilibriums, and theres not!"];Print[um]; Break[]];
+(*Print["length is zero?"];*)
+
+If[Chop[Sort[stableEquilr1][[1]], 10^-15] == 0 , Print["Warning: stableequilr is very low!"];Print[um]];
+If[Chop[Sort[stableEquilh1][[1]], 10^-15] == 0, Print["Warning: stableequilr is very low!"];Print[um]];
+
+(*Then, sort and select the right ones.*)
+stableEquilr1 =Sort[Flatten[stableEquilr1]][[1]];(*Sort takes elements in order of their magnitude/value, [[1]] tells it to take n + 1 input of the list with each counter run and this only happens when combined with while (because we're doing counter!)*)
+stableEquilh1 = Sort[Flatten[stableEquilh1], Greater][[1]];
+
+(*Call dervmutX!*)
+dervmutX1 =(*Flatten[*)dervmutX[stableEquilr1,stableEquilh1, d, r0, c, v, s, ca, cc, lx, g, l, z, b](*]*); 
+
+(*Noppers we no longer need this! :X*)
+(*/. \[Equal] um Corrects for \[Rule]*)
+(* CHECK for dervmutx = 0 works yay! (to check, we did this : dervmutX1 = 0); and the message printed when that happened.*)
 (*Solving the invasion fitness for when it is zero. Name it exp*)
-exp = NSolve[dervmutX1 == 0, un]; (*outputs um \[Rule] value*)
+(*exp = NSolve[dervmutX1 == 0, un];*) (*outputs um \[Rule] value*)
 (*Print["Got to NSolve within while."];*)
-If[(un /. exp) == um, ultium = um ; Break[]]; (*/. \[Equal] um Corrects for \[Rule]*) (*We actually changed this but I'm keeping it cuz why not: the return um makes it that if we DID find um_ESS everything preceeding it wouldn't matter there would be a break!*)
-(*Needs annotating*)
-um = um + 0.01 * (dervmutX1/. un -> um);
+
+
+(*Message: we're here, means that we got to equilibria! *)
+If[Chop[(dervmutX1/. un -> um), 10^-10] == 0, ultium = um ; Print["we're here"]; Break[]];  
+(*Note: to change Chop tolerance: Chop[dervmutX1, 10^-15]*)
+
+(*if the un that you solved for doesn't match, continue on with a different um *)
+um = um + 0.1 * (dervmutX1/. un -> um);
+(*Print["unknown"];Print[dervmutX1]; Print[stableEquilr1];*)
+
+(*When the function should stop*)
 If[um >= 1, ultium = 1; Break[]]];
-If[counter == 2000, Print["Searched for equilibrium for 2000 steps. No equil found yet :("]; Return[um], Return[ultium]];
+(*Code below says that, without exceeding the maximum counter count, search for the equilibria. If equilibria isn't found when you reach counter, print message and return the um that you got!*)
+If[counter == 3000, Print["Searched for equilibrium for 3000 steps. No equil found yet :("]; Return[um], Return[ultium]];
 
 (*exp[um_] \[Equal]  um (*test*), (*body*) Print[exp]; If[exp \[Equal]um, Break[], um = um + 0.00001 * (dervmutX1/. um -> um)]](*otherwise assign new um and find dervmutx and equilbriar&h again*);*)
 (*decrease step size and increase counter to check reliabiliity of um value.*)
@@ -1587,7 +1702,7 @@ Return[um]
 
 
 (* ::Text:: *)
-(*Flatten doesn't work for the stableEquils.*)
+(*Flatten doesn't work for the stableEquils, but doing [[1,1]] would get you what you want! ;)*)
 
 
 (*Flatten[*)Sort[stableEquilh[1/40, 1/8, 1/2, 25, 7/10, 1/10, 1/20, 3/10, 2/10, 2/10, 4/5, 1/20, 3/10], Greater][[1,1]](*]*)
@@ -1596,26 +1711,177 @@ Return[um]
 ?While
 
 
-something wrong with parts . something wrong with Nsolve...
+?Table
 
 
 (* ::Text:: *)
 (*todo 3/15:- make a table for b:- Table[everything you do for a particular value of b, {b, {a list of the b values you want to check}] .*)
+(*you can adjust the movement of um, or the total time steps you're going to run through.*)
 
 
-esstraitval[umMin, .5, 1/2, 25, 7/10, 1/10, 1/20, 3/10, 2/10, 2/10, 4/5, 1/20, 3/10]
+(*create umMinList*)  (*for each b value take the lowest um that produces a positive m*, skip the stuff before white regions*)
 
 
-?While
+(* ::Text:: *)
+(*The five different intial um_s that we're trying .*)
 
 
-(*esstraitval[1/2, 25, 7/10, 1/10, 1/20, 3/10, 2/10, 2/10, 4/5, 1/20, 3/10, 1/2]*)
+1/20, 7/20, 3/8, 2/5, 17/40
 
 
-Clear[b]
+umMinList = {1/20, 1/20, 1/20, 1/20, 1/20, 1/20, 1/20, 1/20, 1/20, 1/20, 1/20, 1/20, 1/20, 1/20, 1/20, 1/20, 1/20, 1/20, 1/20, 1/20, 1/20, 1/20, 1/20, 1/20, 1/20, 1/20, 7/20, 7/20, 3/8, 3/8, 3/8, 3/8, 3/8, 3/8, 3/8, 2/5, 2/5, 2/5, 2/5, 2/5, 17/40}
 
 
-(* ::Subsubsection::Closed:: *)
+abe = Table[b, {b, 0, 1, 1/40}]
+
+
+Extract[abe, 1]
+
+
+(* ::Text:: *)
+(*Doesn' t work, trying again tomorrow :) - problem with esstraitval.*)
+
+
+(*Sample*)
+(*Table[ess[traitval[abe[[i]], umMinList[[i]], ..,], {i, 1, 41}]*)
+
+
+esstraitval[umMinList[[i]], abe[[i]], 1/2, 25, 7/10, 1/10, 1/20, 3/10, 2/10, 2/10, 4/5, 1/20, 3/10]
+
+
+?Table
+
+
+esstraitval[1/20, 7/20, 1/2, 25, 7/10, 1/10, 1/20, 3/10, 2/10, 2/10, 4/5, 1/20, 3/10]
+
+
+(*Testing flatten's capabilities.*)
+Flatten[.50]
+
+
+(* ::Text:: *)
+(*adding .25 to be further away from edges*)
+
+
+(* ::Text:: *)
+(*3/29 :- check for a length of zero, break and output that um. GOOGLE Try-Catch Mathematica.*)
+
+
+(*Next steps: *)
+1. Run it for longer (increasing counter...) doesn't work.. 
+2. Checking thoroughly by making up our fitness function, so that the function is able to stop when dervmutX is zero . Because if there is mulitple strategies that could evolve we wanna know!
+Specifically making sure that this -> If[dervmutX == 0, then stop] is working well! using print, and making a fake dervmutx that is simple making a mock trial .
+3. Pondering biological meaning of these results . (changing equations? (**maybe, if they don't make sense .**) symbiont is also looking out for itself .
+	x . other desires! roam and be free!
+
+
+(*d \[Rule] 1/2, r0 \[Rule] 25, c \[Rule] 7/10, v \[Rule] 1/10, s \[Rule] 1/20, ca \[Rule] 3/10, cc \[Rule] 2/10, lx \[Rule] 2/10, g \[Rule] 4/5, l \[Rule] 1/20, z \[Rule] 3/10, b \[Rule] ?*)
+
+
+umMinList; abe
+
+
+
+
+(* ::Subsubsection:: *)
+(*4/5 :- Todo list, and esstraitval outputs! *)
+
+
+(* ::Text:: *)
+(*Tables are so useful.*)
+(*Check values higher from final 2 umMins how many stable equilibrias there are .*)
+
+
+Check
+Table[Length[stableEquilr[um, 39/40, 1/2, 25, 7/10, 1/10, 1/20, 3/10, 2/10, 2/10, 4/5, 1/20, 3/10]], {um, 2/5, 1, 1/1000}]
+
+
+(* ::Text:: *)
+(*Step 1: For now Natalie is fixing everything else while tryna increase the umMin that we've initiated the function in.*)
+(*1st: Chop = 10^-15, counter at 100, umMinList at 1/20. *)
+(*2nd: This run is for when Chop = 10^-10, and counter is at , umMinList is at 1/20! output has 41 we're heres and it equilibrates at 1/20. *)
+(*-- Adjusting Chop doesn't affect output, counter 3000 seems to work well for it.*)
+(* *initial at 3/8 shows interesting results! should try increasing counter for that one! increased till 5000 & chop at 10^-5. *)
+(* 6th iteration: uses 17/40*)
+(*7th iteration: uses 5000 counter, chops at 10^-5, worked out for 3/8, and 2/5. *)
+(*8th: 5000 counter but chops at 10^10, gunna run after this but with increased chop to 10^-5. :)*)
+(* After alll iterations, should figure out how to create a Listlineplot outta this.*)
+
+
+ott = Table[esstraitval[umMinList[[i]](*+.5*), abe[[i]], 1/2, 25, 7/10, 1/10, 1/20, 3/10, 2/10, 2/10, 4/5, 1/20, 3/10],{i, 1, 41}]
+
+
+(*Next Steps*)
+1. Mess around with iterations and chop for it to not output "No equil found"! [\done]
+	i . Increasing counter max count; [\done, 5000]
+	ii . Increasing the size of chop (10^-15(guesstimated (alexandra word)) < chop < 10^-5(fixed)), [\done, chop ]
+4. um_ess vs . b  Regular ListLinePlot!
+5. Annotate and upload everything onto GitHub . 
+6. Organize Overleaf! 
+
+
+(* ::Subsubsection:: *)
+(*Side Quest! Function for the invasion fitness.*)
+
+
+dervmutEx[umMinList_, b_, d_, r0_, c_, v_, s_, ca_, cc_, lx_, g_, l_, z_] := 
+(*perks of using a module, what happens in the module stays. In the module; i.e. if there ever was something named b, forget it and do the following to it instead.*)
+(*Perk above only applies to the stuff that you put into curly braces below! *)
+Module[{stableEquilr1, stableEquilh1, dervmutX1, exp, um, un, ultium},
+
+umIn = 7/20; (*Lowest um value on list, take that as our initial um.*) (*first iteration was done with 3/4!*)
+um = umIn;
+
+counter = 0;
+While[counter < 3000, (*le test, counter: don't do it more than 5000 times*)
+(*Everything below is the body.*)
+counter = counter +1; 
+
+(*Calling stable equilibrias*)
+stableEquilr1 =stableEquilr[um, b, d, r0, c, v, s, ca, cc, lx, g, l, z];
+stableEquilh1 = stableEquilh[um, b, d, r0, c, v, s, ca, cc, lx, g, l, z];
+
+(*Check that there are equilibrias present!*)
+If[Length[stableEquilr1] == 0, Print["we tested if there are resource equilibriums, and theres not!"];Print[um]; Break[]];
+If[Length[stableEquilh1] == 0, Print["we tested if there are host equilibriums, and theres not!"];Print[um]; Break[]];
+
+(*Then, sort and select the right ones.*)
+stableEquilr1 =Sort[Flatten[stableEquilr1]][[1]];(*Sort takes elements in order of their magnitude/value, [[1]] tells it to take n + 1 input of the list with each counter run and this only happens when combined with while (because we're doing counter!)*)
+stableEquilh1 = Sort[Flatten[stableEquilh1], Greater][[1]];
+un = Table[b, {b, 0, 1, 1/40}];
+
+(*Call dervmutX!*)
+dervmutX1 =(*Flatten[*)dervmutX[stableEquilr1,stableEquilh1, d, r0, c, v, s, ca, cc, lx, g, l, z, b](*]*); 
+
+
+Return[dervmutX1]
+]]
+
+
+Table[dervmutEx[umMinList[[i]], abe[[i]], 1/2, 25, 7/10, 1/10, 1/20, 3/10, 2/10, 2/10, 4/5, 1/20, 3/10],{i, 1, 41}]
+
+
+(* ::Subsection::Closed:: *)
+(*um_ESS vs. b ListLinePlot*)
+
+
+?ListLinePlot
+
+
+?Table
+
+
+abe[[1]]
+
+
+ListLinePlot[{0,.0393549},{abe[[2]], 0.0463008},{abe[[3]], 0.0888791},{abe[[4]]},{abe[[5]]},{abe[[6]]},{abe[[7]]},{abe[[8]]},{abe[[9]]},{abe[[10]]},{abe[[11]]},{abe[[12]]},{abe[[13]]},{abe[[14]]},{abe[[15]]},{abe[[16]]},{abe[[17]]},{abe[[18]]},{abe[[19]]},{abe[[20]]},{abe[[21]]},{abe[[22]]},{abe[[23]]},{abe[[24]]},{abe[[25]]},{abe[[26]]},{abe[[27]]},{abe[[28]]},{abe[[29]]},{abe[[30]]},{abe[[31]]},{abe[[32]]},{abe[[33]]},{abe[[34]]},{abe[[35]]},{abe[[36]]},{abe[[37]]},{abe[[38]]},{abe[[39]]},{abe[[40]]},{abe[[41]]}]
+
+
+(* ::Section::Closed:: *)
+(*Plotting *)
+
+
+(* ::Subsubsection:: *)
 (*MutGrowth. we'd already done this. *)
 
 
@@ -1629,13 +1895,6 @@ TimeConstrained[
 	timeOut, (* try to find eigenvalues for timeOut number of seconds *)
 	Eigenvalues[N[mutX[iP, iQ, hmut, vmut, hres, vres, d]], 1] (* Do this if the previous calculation timed out *)
 ][[1]] (* This [[1]] is because eigenvalues are always returned as a list, even if there's only one *)
-
-
-Extract[%72[[1,2]],{1,2}]
-
-
-(* ::Section::Closed:: *)
-(*Plotting *)
 
 
 (* ::Text:: *)
